@@ -37,6 +37,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           base_sha='${{ github.event.pull_request.base.sha }}'
+          if ! git cat-file -e "${base_sha}:package.json"; then
+            echo "Base revision has no package.json; accepting initial package manifest."
+            exit 0
+          fi
           base_version="$(git show "${base_sha}:package.json" | node -e "let source=''; process.stdin.on('data',(chunk)=>source+=chunk); process.stdin.on('end',()=>process.stdout.write(JSON.parse(source).version ?? ''))")"
           candidate_version="$(node -p "require('./package.json').version")"
           BASE_VERSION="$base_version" CANDIDATE_VERSION="$candidate_version" node -e '
@@ -145,3 +149,13 @@ jobs:
           else
             echo "No changeset:status script found; skipping validation."
           fi
+
+      - name: Enforce PKGViz cyclic-dependencies rule
+        run: cd src && bunx pkgviz@0.8.1 --out pkgviz-audit.json --rule cyclic-dependencies=block
+
+      - name: Upload PKGViz audit
+        if: always() && hashFiles('src/pkgviz-audit.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkgviz-audit
+          path: src/pkgviz-audit.json

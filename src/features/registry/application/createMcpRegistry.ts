@@ -47,22 +47,20 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
         return denyAsync(options.auditSink, toolId, context, null, 'unknown-tool');
       try {
         assertSchema(input, registeredTool.tool.inputSchema, 'input');
-        const accountId = registeredTool.tool.accountId(input);
-        if (accountId !== null && !context.allowedAccounts.includes(accountId))
-          return denyAsync(options.auditSink, toolId, context, accountId, 'account-not-allowed');
+        const accountId = getAuthorizedAccountId(registeredTool, input, context, options.auditSink);
         await assertWriteApprovalAsync(
           registeredTool,
           input,
           context,
           options.approvalVerifier,
-          accountId,
+          await accountId,
           options.now ?? (() => new Date()),
         );
         const output = await registeredTool.tool.executeAsync(input, context);
         if (registeredTool.tool.outputSchema !== undefined)
           assertSchema(output, registeredTool.tool.outputSchema, 'output');
         await recordAsync(options.auditSink, {
-          accountId,
+          accountId: await accountId,
           actorId: context.actorId,
           outcome: 'executed',
           risk: registeredTool.tool.risk,
@@ -83,6 +81,22 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
     },
     listTools: () => registeredTools,
   };
+}
+
+/*** Reject missing account identity unless a tool explicitly declares global scope. */
+async function getAuthorizedAccountId(
+  registeredTool: RegisteredMcpTool,
+  input: Readonly<Record<string, unknown>>,
+  context: McpToolExecutionContext,
+  auditSink: McpAuditSink | undefined,
+): Promise<string | null> {
+  if (registeredTool.tool.scope === 'global') return null;
+  const accountId = registeredTool.tool.accountId(input);
+  if (accountId === null)
+    return denyAsync(auditSink, registeredTool.toolId, context, null, 'missing-account-identity');
+  if (!context.allowedAccounts.includes(accountId))
+    return denyAsync(auditSink, registeredTool.toolId, context, accountId, 'account-not-allowed');
+  return accountId;
 }
 
 /*** Register valid, stable namespaced tool identifiers. */
@@ -198,13 +212,14 @@ function assertSchema(
   schema: McpJsonSchema,
   label: string,
 ): asserts value is Readonly<Record<string, unknown>> {
-  if (
-    schema.type !== 'object' ||
-    typeof value !== 'object' ||
-    value === null ||
-    Array.isArray(value)
-  )
-    throw new Error(`MCP ${label} must match an object schema.`);
+  if (schema.type !== 'object') throw new Error(`MCP ${label} must match an object schema.`);
+  assertSchemaValue(value, schema, label);
+}
+
+/*** Recursively validate serializable provider values against the declared schema. */
+function assertSchemaValue(value: unknown, schema: McpJsonSchema, label: string): void {
+  if (!matchesType(value, schema.type)) throw new Error(`MCP ${label} must be ${schema.type}.`);
+  if (schema.type !== 'object') return;
   const record = new Map(Object.entries(value as Record<string, unknown>));
   for (const property of schema.required ?? [])
     if (!record.has(property))
@@ -212,8 +227,8 @@ function assertSchema(
   const declaredProperties = new Map(Object.entries(schema.properties ?? {}));
   for (const [property, propertySchema] of declaredProperties) {
     const candidate = record.get(property);
-    if (candidate !== undefined && !matchesType(candidate, propertySchema.type))
-      throw new Error(`MCP ${label}.${property} must be ${propertySchema.type}.`);
+    if (candidate !== undefined)
+      assertSchemaValue(candidate, propertySchema, `${label}.${property}`);
   }
   if (schema.additionalProperties === false)
     for (const property of record.keys())

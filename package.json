@@ -47,6 +47,60 @@
   },
   "ankh": {
     "category": "mcp",
+    "capabilities": [
+      {
+        "access": [
+          "invoke"
+        ],
+        "binding": {
+          "bindableAs": [
+            "target"
+          ],
+          "kind": "action"
+        },
+        "id": "mcp.add",
+        "owner": "@ankhorage/mcp"
+      },
+      {
+        "access": [
+          "invoke"
+        ],
+        "binding": {
+          "bindableAs": [
+            "target"
+          ],
+          "kind": "action"
+        },
+        "id": "mcp.list",
+        "owner": "@ankhorage/mcp"
+      },
+      {
+        "access": [
+          "invoke"
+        ],
+        "binding": {
+          "bindableAs": [
+            "target"
+          ],
+          "kind": "action"
+        },
+        "id": "mcp.doctor",
+        "owner": "@ankhorage/mcp"
+      },
+      {
+        "access": [
+          "invoke"
+        ],
+        "binding": {
+          "bindableAs": [
+            "target"
+          ],
+          "kind": "action"
+        },
+        "id": "mcp.serve",
+        "owner": "@ankhorage/mcp"
+      }
+    ],
     "provider": "./dist/cli/index.js"
   },
   "scripts": {
@@ -71,7 +125,7 @@
     "@modelcontextprotocol/sdk": "^1.32.2"
   },
   "devDependencies": {
-    "@ankhorage/devtools": "^2.3.32",
+    "@ankhorage/devtools": "^2.3.31",
     "@ankhorage/paradox": "^0.3.5",
     "@types/bun": "^1.4.2",
     "@types/node": "^26.6.5",

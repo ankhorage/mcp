@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { McpIntegration, McpIntegrationModule } from '../../../types/public.js';
@@ -12,20 +12,24 @@ export interface DiscoverMcpIntegrationsOptions {
 export async function discoverMcpIntegrationsAsync(
   options: DiscoverMcpIntegrationsOptions,
 ): Promise<readonly McpIntegration[]> {
-  const names = [...new Set(options.packageNames)].toSorted();
-  const requireFromCwd = createRequire(pathToFileURL(`${options.cwd}/package.json`));
-  return Promise.all(names.map((name) => loadIntegrationAsync(name, requireFromCwd)));
+  const integrations: McpIntegration[] = [];
+  try {
+    for (const packageName of [...new Set(options.packageNames)].toSorted())
+      integrations.push(await loadIntegrationAsync(packageName, options.cwd));
+    return integrations;
+  } catch (error) {
+    await closeIntegrationsAsync(integrations);
+    throw error;
+  }
 }
 
 /*** Import a package's public mcp export and enforce the integration contract. */
-async function loadIntegrationAsync(
-  packageName: string,
-  requireFromCwd: NodeRequire,
-): Promise<McpIntegration> {
+async function loadIntegrationAsync(packageName: string, cwd: string): Promise<McpIntegration> {
   if (!isPackageName(packageName)) throw new Error(`Invalid MCP provider package: ${packageName}`);
-  let modulePath: string;
+  const parentUrl = pathToFileURL(join(cwd, 'package.json')).href;
+  let moduleUrl: string;
   try {
-    modulePath = requireFromCwd.resolve(`${packageName}/mcp`);
+    moduleUrl = import.meta.resolve(`${packageName}/mcp`, parentUrl);
   } catch (error) {
     throw new Error(
       `MCP provider package is not installed or does not export ./mcp: ${packageName}`,
@@ -34,7 +38,7 @@ async function loadIntegrationAsync(
   }
   let loaded: unknown;
   try {
-    loaded = await import(pathToFileURL(modulePath).href);
+    loaded = await import(moduleUrl);
   } catch {
     throw new Error(`MCP provider initialization module could not be imported: ${packageName}`);
   }
@@ -51,6 +55,17 @@ async function loadIntegrationAsync(
     throw new Error(`MCP provider initialization failed for ${packageName}: ${detail}`, {
       cause: error,
     });
+  }
+}
+
+/*** Close providers initialized before a later configured provider fails discovery. */
+async function closeIntegrationsAsync(integrations: readonly McpIntegration[]): Promise<void> {
+  for (const integration of integrations) {
+    try {
+      if (integration.closeAsync !== undefined) await integration.closeAsync();
+    } catch {
+      // A later discovery error remains the actionable error; cleanup is best effort.
+    }
   }
 }
 

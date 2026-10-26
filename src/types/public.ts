@@ -19,8 +19,7 @@ export interface McpChangeDescriptor {
   readonly resourceId: string;
 }
 
-export interface McpTool {
-  accountId(input: Readonly<Record<string, unknown>>): string | null;
+interface McpToolBase {
   describeChangeAsync?(
     input: Readonly<Record<string, unknown>>,
     context: McpToolExecutionContext,
@@ -33,7 +32,6 @@ export interface McpTool {
   readonly id: string;
   readonly inputSchema: McpJsonSchema;
   readonly outputSchema?: McpJsonSchema;
-  readonly requiredPermissions?: readonly string[];
   readonly risk: McpRisk;
   readonly title: string;
   verifyExpectedStateAsync?(
@@ -42,6 +40,17 @@ export interface McpTool {
     change: McpChangeDescriptor,
   ): Promise<boolean>;
 }
+
+export interface McpAccountScopedTool extends McpToolBase {
+  accountId(input: Readonly<Record<string, unknown>>): string | null;
+  readonly scope: 'account';
+}
+
+export interface McpGlobalTool extends McpToolBase {
+  readonly scope: 'global';
+}
+
+export type McpTool = McpAccountScopedTool | McpGlobalTool;
 
 export interface McpIntegration {
   closeAsync?(): Promise<void>;

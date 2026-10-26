@@ -4,9 +4,9 @@
 
 ## Repository
 
-Package: `Package name not declared`
+Package: `@ankhorage/mcp`
 
-No package description is declared.
+Secure, provider-neutral MCP runtime and Ankh CLI provider.
 
 ## Current architecture only
 
