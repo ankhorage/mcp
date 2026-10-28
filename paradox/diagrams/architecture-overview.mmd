@@ -1,0 +1,45 @@
+graph TD
+  package__ankhorage_mcp["@ankhorage/mcp"]
+  entrypoint_src_index_ts["src/index.ts"]
+  package__ankhorage_mcp --> entrypoint_src_index_ts
+  module_src_cli_commands_add_ts["src/cli/commands/add.ts"]
+  package__ankhorage_mcp -.-> module_src_cli_commands_add_ts
+  module_src_cli_commands_doctor_ts["src/cli/commands/doctor.ts"]
+  package__ankhorage_mcp -.-> module_src_cli_commands_doctor_ts
+  module_src_cli_commands_doctor_ts --> module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts
+  module_src_cli_commands_list_ts["src/cli/commands/list.ts"]
+  package__ankhorage_mcp -.-> module_src_cli_commands_list_ts
+  module_src_cli_commands_serve_ts["src/cli/commands/serve.ts"]
+  package__ankhorage_mcp -.-> module_src_cli_commands_serve_ts
+  module_src_cli_commands_serve_ts --> module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts
+  module_src_cli_commands_serve_ts --> module_src_features_transport_composition_createMcpStdioServerAsync_ts
+  module_src_cli_index_ts["src/cli/index.ts"]
+  package__ankhorage_mcp -.-> module_src_cli_index_ts
+  module_src_cli_index_ts --> module_src_cli_commands_add_ts
+  module_src_cli_index_ts --> module_src_cli_commands_doctor_ts
+  module_src_cli_index_ts --> module_src_cli_commands_list_ts
+  module_src_cli_index_ts --> module_src_cli_commands_serve_ts
+  module_src_features_discovery_application_discoverMcpIntegrationsAsync_test_ts["src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"]
+  package__ankhorage_mcp -.-> module_src_features_discovery_application_discoverMcpIntegrationsAsync_test_ts
+  module_src_features_discovery_application_discoverMcpIntegrationsAsync_test_ts --> module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts
+  module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts["src/features/discovery/application/discoverMcpIntegrationsAsync.ts"]
+  package__ankhorage_mcp -.-> module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts
+  module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts --> module_src_types_public_ts
+  module_src_features_registry_application_createMcpRegistry_test_ts["src/features/registry/application/createMcpRegistry.test.ts"]
+  package__ankhorage_mcp -.-> module_src_features_registry_application_createMcpRegistry_test_ts
+  module_src_features_registry_application_createMcpRegistry_test_ts --> module_src_features_registry_application_createMcpRegistry_ts
+  module_src_features_registry_application_createMcpRegistry_ts["src/features/registry/application/createMcpRegistry.ts"]
+  package__ankhorage_mcp -.-> module_src_features_registry_application_createMcpRegistry_ts
+  module_src_features_registry_application_createMcpRegistry_ts --> module_src_types_public_ts
+  module_src_features_transport_adapters_inbound_createMcpStdioServerAsync_ts["src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"]
+  package__ankhorage_mcp -.-> module_src_features_transport_adapters_inbound_createMcpStdioServerAsync_ts
+  module_src_features_transport_adapters_inbound_createMcpStdioServerAsync_ts --> module_src_features_registry_application_createMcpRegistry_ts
+  module_src_features_transport_adapters_inbound_createMcpStdioServerAsync_ts --> module_src_types_public_ts
+  module_src_features_transport_composition_createMcpStdioServerAsync_ts["src/features/transport/composition/createMcpStdioServerAsync.ts"]
+  package__ankhorage_mcp -.-> module_src_features_transport_composition_createMcpStdioServerAsync_ts
+  module_src_features_transport_composition_createMcpStdioServerAsync_ts --> module_src_features_registry_application_createMcpRegistry_ts
+  module_src_features_transport_composition_createMcpStdioServerAsync_ts --> module_src_features_transport_adapters_inbound_createMcpStdioServerAsync_ts
+  module_src_features_transport_composition_createMcpStdioServerAsync_ts --> module_src_types_public_ts
+  module_src_index_ts["src/index.ts"]
+  module_src_types_public_ts["src/types/public.ts"]
+  package__ankhorage_mcp -.-> module_src_types_public_ts

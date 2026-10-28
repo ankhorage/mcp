@@ -1,0 +1,5 @@
+sequenceDiagram
+  participant participant_createMcpRegistry as createMcpRegistry
+  participant participant_registerTools as registerTools
+  participant_createMcpRegistry->>participant_registerTools: registerTools()
+  participant_registerTools-->>participant_createMcpRegistry: return
