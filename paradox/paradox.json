@@ -14,7 +14,7 @@
     {
       "id": "npm",
       "label": "npm",
-      "value": "v0.1.0",
+      "value": "v0.2.0",
       "color": "cb3837"
     },
     {
@@ -70,7 +70,7 @@
       "title": "Basic Usage",
       "description": "`@ankhorage/mcp` centrally registers provider tools and enforces their declared account scope.\nProviders supply integrations through their published `./mcp` export; the runtime owns discovery,\nvalidation, approval enforcement, and transport.",
       "language": "ts",
-      "code": "export const registry = createMcpRegistry({\n  integrations: [\n    {\n      id: 'example',\n      tools: [\n        {\n          description: 'Read account metadata.',\n          executeAsync: () => Promise.resolve({ status: 'ok' }),\n          id: 'account-status',\n          inputSchema: {\n            additionalProperties: false,\n            properties: { accountId: { type: 'string' } },\n            required: ['accountId'],\n            type: 'object',\n          },\n          risk: 'read',\n          scope: 'account',\n          title: 'Account status',\n          accountId: (input) =>\n            typeof input.accountId === 'string' ? input.accountId : null,\n        },\n      ],\n    },\n  ],\n});",
+      "code": "export const registry = createMcpRegistry({\n  integrations: [\n    {\n      id: 'example',\n      tools: [\n        {\n          description: 'Read account metadata.',\n          executeAsync: () => Promise.resolve({ status: 'ok' }),\n          id: 'account-status',\n          inputSchema: {\n            additionalProperties: false,\n            properties: { accountId: { type: 'string' } },\n            required: ['accountId'],\n            type: 'object',\n          },\n          risk: 'read',\n          scope: 'account',\n          title: 'Account status',\n          accountId: (input) => (typeof input.accountId === 'string' ? input.accountId : null),\n        },\n      ],\n    },\n  ],\n});",
       "sourcePath": "examples/basic-usage/index.ts",
       "isReadme": true,
       "see": [],
@@ -85,9 +85,19 @@
   ],
   "modules": [
     {
-      "path": "src/cli/commands/add.ts",
+      "path": "src/capabilities/index.ts",
       "isEntrypoint": false,
       "dependencies": [],
+      "exports": [
+        "CAPABILITIES"
+      ]
+    },
+    {
+      "path": "src/cli/commands/add.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/config/application/readMcpConfigurationAsync.ts"
+      ],
       "exports": [
         "add"
       ]
@@ -114,6 +124,7 @@
       "path": "src/cli/commands/serve.ts",
       "isEntrypoint": false,
       "dependencies": [
+        "src/features/config/application/readMcpConfigurationAsync.ts",
         "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
         "src/features/transport/composition/createMcpStdioServerAsync.ts"
       ],
@@ -125,6 +136,7 @@
       "path": "src/cli/index.ts",
       "isEntrypoint": false,
       "dependencies": [
+        "src/capabilities/index.ts",
         "src/cli/commands/add.ts",
         "src/cli/commands/doctor.ts",
         "src/cli/commands/list.ts",
@@ -132,6 +144,16 @@
       ],
       "exports": [
         "default"
+      ]
+    },
+    {
+      "path": "src/features/config/application/readMcpConfigurationAsync.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/types/config.ts"
+      ],
+      "exports": [
+        "readMcpConfigurationAsync"
       ]
     },
     {
@@ -227,6 +249,20 @@
       ]
     },
     {
+      "path": "src/standalone.test.ts",
+      "isEntrypoint": false,
+      "dependencies": [],
+      "exports": []
+    },
+    {
+      "path": "src/types/config.ts",
+      "isEntrypoint": false,
+      "dependencies": [],
+      "exports": [
+        "McpConfiguration"
+      ]
+    },
+    {
       "path": "src/types/public.ts",
       "isEntrypoint": false,
       "dependencies": [],
@@ -259,7 +295,7 @@
       "modulePath": "src/features/registry/application/createMcpRegistry.ts",
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 37,
+        "line": 33,
         "column": 1
       },
       "exportPaths": [
@@ -398,7 +434,7 @@
       "modulePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 12,
+        "line": 14,
         "column": 1
       },
       "exportPaths": [
@@ -437,7 +473,7 @@
       "modulePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 6,
+        "line": 8,
         "column": 1
       },
       "exportPaths": [
@@ -720,7 +756,7 @@
         {
           "name": "outcome",
           "kind": "property",
-          "type": "\"denied\" | \"executed\" | \"failed\"",
+          "type": "\"denied\" | \"executed\" | \"failed\" | \"intent\"",
           "required": true,
           "description": null
         },
@@ -1193,7 +1229,7 @@
       "isReadme": false,
       "see": [],
       "security": [],
-      "kind": "type",
+      "kind": "unknown",
       "modulePath": "src/features/registry/application/createMcpRegistry.ts",
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
@@ -1203,33 +1239,9 @@
       "exportPaths": [
         "src/index.ts"
       ],
-      "relatedSymbols": [
-        "McpTool"
-      ],
+      "relatedSymbols": [],
       "signatures": [],
-      "members": [
-        {
-          "name": "integrationId",
-          "kind": "property",
-          "type": "string",
-          "required": true,
-          "description": null
-        },
-        {
-          "name": "tool",
-          "kind": "property",
-          "type": "McpTool",
-          "required": true,
-          "description": null
-        },
-        {
-          "name": "toolId",
-          "kind": "property",
-          "type": "string",
-          "required": true,
-          "description": null
-        }
-      ],
+      "members": [],
       "structuredRows": []
     }
   ],
@@ -1242,18 +1254,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/cli/commands/add.ts",
-        "line": 7,
-        "column": 1
-      }
-    },
-    {
-      "name": "readPackagesAsync",
-      "description": "Read only the small explicit provider configuration shape.",
-      "see": [],
-      "security": [],
-      "sourceLocation": {
-        "filePath": "src/cli/commands/add.ts",
-        "line": 25,
+        "line": 9,
         "column": 1
       }
     },
@@ -1264,7 +1265,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/cli/commands/add.ts",
-        "line": 44,
+        "line": 31,
         "column": 1
       }
     },
@@ -1297,7 +1298,62 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/cli/commands/serve.ts",
-        "line": 10,
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "name": "readPackageVersion",
+      "description": "Read the installed package version so CLI discovery always reports the published artifact version.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/index.ts",
+        "line": 37,
+        "column": 1
+      }
+    },
+    {
+      "name": "readMcpConfigurationAsync",
+      "description": "Read the explicit workspace MCP configuration, defaulting to a deny-all empty configuration.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "name": "parseMcpConfiguration",
+      "description": "Validate the small configuration shape before it becomes trusted server startup state.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "name": "isAccountId",
+      "description": "Permit non-empty account identities without imposing a provider-specific identifier format.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "line": 45,
+        "column": 1
+      }
+    },
+    {
+      "name": "isPackageName",
+      "description": "Permit package identifiers only, never path-like provider targets.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "line": 50,
         "column": 1
       }
     },
@@ -1319,7 +1375,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 12,
+        "line": 14,
         "column": 1
       }
     },
@@ -1330,7 +1386,40 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 27,
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "name": "resolveMcpExportAsync",
+      "description": "Resolve the public import export from the explicitly selected consumer installation.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 63,
+        "column": 1
+      }
+    },
+    {
+      "name": "selectImportExportTarget",
+      "description": "Select the ESM target for the required public `./mcp` package export.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 80,
+        "column": 1
+      }
+    },
+    {
+      "name": "selectImportConditionTarget",
+      "description": "Follow package-export condition order using the Node ESM import conditions.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 87,
         "column": 1
       }
     },
@@ -1341,7 +1430,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 62,
+        "line": 107,
         "column": 1
       }
     },
@@ -1352,7 +1441,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 73,
+        "line": 118,
         "column": 1
       }
     },
@@ -1363,7 +1452,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-        "line": 83,
+        "line": 128,
         "column": 1
       }
     },
@@ -1374,7 +1463,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.test.ts",
-        "line": 142,
+        "line": 293,
         "column": 1
       }
     },
@@ -1385,7 +1474,40 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 37,
+        "line": 33,
+        "column": 1
+      }
+    },
+    {
+      "name": "executeRegisteredToolAsync",
+      "description": "Enforce one registered tool boundary before it reaches its provider implementation.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 51,
+        "column": 1
+      }
+    },
+    {
+      "name": "executeAndAuditAsync",
+      "description": "Execute one authorized tool and durably record write outcomes without exposing provider failures.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 99,
+        "column": 1
+      }
+    },
+    {
+      "name": "recordOutcomeAsync",
+      "description": "Record the terminal outcome according to the read best-effort and write durable-audit policies.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 129,
         "column": 1
       }
     },
@@ -1396,7 +1518,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 87,
+        "line": 149,
         "column": 1
       }
     },
@@ -1407,7 +1529,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 103,
+        "line": 165,
         "column": 1
       }
     },
@@ -1418,7 +1540,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 124,
+        "line": 186,
         "column": 1
       }
     },
@@ -1429,18 +1551,29 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 164,
+        "line": 226,
         "column": 1
       }
     },
     {
-      "name": "recordAsync",
-      "description": "Record audit events without allowing observability failure to bypass enforcement.",
+      "name": "recordBestEffortAsync",
+      "description": "Record reads and denials opportunistically without changing their authorization decision.",
       "see": [],
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 183,
+        "line": 248,
+        "column": 1
+      }
+    },
+    {
+      "name": "recordRequiredAsync",
+      "description": "Require a durable audit record for each write intent and terminal write outcome.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 260,
         "column": 1
       }
     },
@@ -1451,7 +1584,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 191,
+        "line": 273,
         "column": 1
       }
     },
@@ -1462,7 +1595,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 198,
+        "line": 280,
         "column": 1
       }
     },
@@ -1473,7 +1606,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 210,
+        "line": 292,
         "column": 1
       }
     },
@@ -1484,7 +1617,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 220,
+        "line": 303,
         "column": 1
       }
     },
@@ -1495,7 +1628,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 240,
+        "line": 324,
         "column": 1
       }
     },
@@ -1506,7 +1639,7 @@
       "security": [],
       "sourceLocation": {
         "filePath": "src/features/registry/application/createMcpRegistry.ts",
-        "line": 251,
+        "line": 335,
         "column": 1
       }
     },
@@ -1529,6 +1662,127 @@
       "sourceLocation": {
         "filePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
         "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertCapabilityMaterializationAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "name": "createPackedConsumerAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 35,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertExportsAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 80,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertNodeDiscoveryAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 103,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertAnkhCliAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 114,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertMcpStdioAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 128,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertMcpServeAccountScopeAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 150,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertSecurityAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 177,
+        "column": 1
+      }
+    },
+    {
+      "name": "writeProviderFixtureAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 196,
+        "column": 1
+      }
+    },
+    {
+      "name": "runCommandAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 211,
+        "column": 1
+      }
+    },
+    {
+      "name": "getTemporaryDirectory",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/standalone.test.ts",
+        "line": 228,
         "column": 1
       }
     }
@@ -1583,6 +1837,11 @@
       },
       {
         "fromPath": "src/cli/index.ts",
+        "toPath": "src/capabilities/index.ts",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
+        "fromPath": "src/cli/index.ts",
         "toPath": "src/cli/commands/add.ts",
         "sourcePath": "src/cli/index.ts"
       },
@@ -1602,9 +1861,19 @@
         "sourcePath": "src/cli/index.ts"
       },
       {
+        "fromPath": "src/cli/commands/add.ts",
+        "toPath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
         "fromPath": "src/cli/commands/doctor.ts",
         "toPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
         "sourcePath": "src/cli/commands/doctor.ts"
+      },
+      {
+        "fromPath": "src/cli/commands/serve.ts",
+        "toPath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "sourcePath": "src/cli/commands/serve.ts"
       },
       {
         "fromPath": "src/cli/commands/serve.ts",
@@ -1615,6 +1884,11 @@
         "fromPath": "src/cli/commands/serve.ts",
         "toPath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
         "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromPath": "src/features/config/application/readMcpConfigurationAsync.ts",
+        "toPath": "src/types/config.ts",
+        "sourcePath": "src/features/config/application/readMcpConfigurationAsync.ts"
       },
       {
         "fromPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
@@ -1664,6 +1938,312 @@
     ],
     "calls": [
       {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "dirname",
+        "callExpression": "dirname",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "test",
+        "callExpression": "test",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertCapabilityMaterializationAsync",
+        "callExpression": "assertCapabilityMaterializationAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "createPackedConsumerAsync",
+        "callExpression": "createPackedConsumerAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertExportsAsync",
+        "callExpression": "assertExportsAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertNodeDiscoveryAsync",
+        "callExpression": "assertNodeDiscoveryAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertAnkhCliAsync",
+        "callExpression": "assertAnkhCliAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertMcpStdioAsync",
+        "callExpression": "assertMcpStdioAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertMcpServeAccountScopeAsync",
+        "callExpression": "assertMcpServeAccountScopeAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "assertSecurityAsync",
+        "callExpression": "assertSecurityAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/standalone.test.ts",
+        "toSymbol": "rm",
+        "callExpression": "rm",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertCapabilityMaterializationAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "getTemporaryDirectory",
+        "callExpression": "getTemporaryDirectory",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "mkdir",
+        "callExpression": "mkdir",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "mkdtemp",
+        "callExpression": "mkdtemp",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "readdir",
+        "callExpression": "readdir",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "writeProviderFixtureAsync",
+        "callExpression": "writeProviderFixtureAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "createPackedConsumerAsync",
+        "toSymbol": "rm",
+        "callExpression": "rm",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertExportsAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertExportsAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertExportsAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertExportsAsync",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertExportsAsync",
+        "toSymbol": "expect",
+        "callExpression": "expect",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertNodeDiscoveryAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertNodeDiscoveryAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertNodeDiscoveryAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertAnkhCliAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertAnkhCliAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertAnkhCliAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpStdioAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpStdioAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpStdioAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpServeAccountScopeAsync",
+        "toSymbol": "mkdir",
+        "callExpression": "mkdir",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpServeAccountScopeAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpServeAccountScopeAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertMcpServeAccountScopeAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertSecurityAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertSecurityAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "assertSecurityAsync",
+        "toSymbol": "runCommandAsync",
+        "callExpression": "runCommandAsync",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "writeProviderFixtureAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "writeProviderFixtureAsync",
+        "toSymbol": "mkdir",
+        "callExpression": "mkdir",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "writeProviderFixtureAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "runCommandAsync",
+        "toSymbol": "getTemporaryDirectory",
+        "callExpression": "getTemporaryDirectory",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "runCommandAsync",
+        "toSymbol": "mkdir",
+        "callExpression": "mkdir",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "getTemporaryDirectory",
+        "toSymbol": "tmpdir",
+        "callExpression": "tmpdir",
+        "sourcePath": "src/standalone.test.ts"
+      },
+      {
+        "fromSymbol": "src/cli/index.ts",
+        "toSymbol": "readPackageVersion",
+        "callExpression": "readPackageVersion",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
+        "fromSymbol": "readPackageVersion",
+        "toSymbol": "createRequire",
+        "callExpression": "createRequire",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
         "fromSymbol": "add",
         "toSymbol": "isPackageName",
         "callExpression": "isPackageName",
@@ -1671,14 +2251,14 @@
       },
       {
         "fromSymbol": "add",
-        "toSymbol": "join",
-        "callExpression": "join",
+        "toSymbol": "readMcpConfigurationAsync",
+        "callExpression": "readMcpConfigurationAsync",
         "sourcePath": "src/cli/commands/add.ts"
       },
       {
         "fromSymbol": "add",
-        "toSymbol": "readPackagesAsync",
-        "callExpression": "readPackagesAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
         "sourcePath": "src/cli/commands/add.ts"
       },
       {
@@ -1703,18 +2283,6 @@
         "fromSymbol": "add",
         "toSymbol": "rename",
         "callExpression": "rename",
-        "sourcePath": "src/cli/commands/add.ts"
-      },
-      {
-        "fromSymbol": "readPackagesAsync",
-        "toSymbol": "readFile",
-        "callExpression": "readFile",
-        "sourcePath": "src/cli/commands/add.ts"
-      },
-      {
-        "fromSymbol": "src/cli/commands/add.ts",
-        "toSymbol": "isPackageName",
-        "callExpression": "isPackageName",
         "sourcePath": "src/cli/commands/add.ts"
       },
       {
@@ -1755,14 +2323,8 @@
       },
       {
         "fromSymbol": "serve",
-        "toSymbol": "readFile",
-        "callExpression": "readFile",
-        "sourcePath": "src/cli/commands/serve.ts"
-      },
-      {
-        "fromSymbol": "serve",
-        "toSymbol": "join",
-        "callExpression": "join",
+        "toSymbol": "readMcpConfigurationAsync",
+        "callExpression": "readMcpConfigurationAsync",
         "sourcePath": "src/cli/commands/serve.ts"
       },
       {
@@ -1776,6 +2338,24 @@
         "toSymbol": "createMcpStdioServerAsync",
         "callExpression": "createMcpStdioServerAsync",
         "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromSymbol": "readMcpConfigurationAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/features/config/application/readMcpConfigurationAsync.ts"
+      },
+      {
+        "fromSymbol": "readMcpConfigurationAsync",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/features/config/application/readMcpConfigurationAsync.ts"
+      },
+      {
+        "fromSymbol": "readMcpConfigurationAsync",
+        "toSymbol": "parseMcpConfiguration",
+        "callExpression": "parseMcpConfiguration",
+        "sourcePath": "src/features/config/application/readMcpConfigurationAsync.ts"
       },
       {
         "fromSymbol": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
@@ -1851,14 +2431,8 @@
       },
       {
         "fromSymbol": "loadIntegrationAsync",
-        "toSymbol": "pathToFileURL",
-        "callExpression": "pathToFileURL",
-        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
-      },
-      {
-        "fromSymbol": "loadIntegrationAsync",
-        "toSymbol": "join",
-        "callExpression": "join",
+        "toSymbol": "resolveMcpExportAsync",
+        "callExpression": "resolveMcpExportAsync",
         "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
       },
       {
@@ -1871,6 +2445,54 @@
         "fromSymbol": "loadIntegrationAsync",
         "toSymbol": "isIntegration",
         "callExpression": "isIntegration",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "resolveMcpExportAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "resolveMcpExportAsync",
+        "toSymbol": "pathToFileURL",
+        "callExpression": "pathToFileURL",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "resolveMcpExportAsync",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "resolveMcpExportAsync",
+        "toSymbol": "selectImportExportTarget",
+        "callExpression": "selectImportExportTarget",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "resolveMcpExportAsync",
+        "toSymbol": "resolve",
+        "callExpression": "resolve",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "resolveMcpExportAsync",
+        "toSymbol": "dirname",
+        "callExpression": "dirname",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "selectImportExportTarget",
+        "toSymbol": "selectImportConditionTarget",
+        "callExpression": "selectImportConditionTarget",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "selectImportConditionTarget",
+        "toSymbol": "selectImportConditionTarget",
+        "callExpression": "selectImportConditionTarget",
         "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
       },
       {
@@ -1935,32 +2557,74 @@
       },
       {
         "fromSymbol": "executeAsync",
+        "toSymbol": "executeRegisteredToolAsync",
+        "callExpression": "executeRegisteredToolAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeRegisteredToolAsync",
         "toSymbol": "assertSchema",
         "callExpression": "assertSchema",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {
-        "fromSymbol": "executeAsync",
+        "fromSymbol": "executeRegisteredToolAsync",
         "toSymbol": "getAuthorizedAccountId",
         "callExpression": "getAuthorizedAccountId",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {
-        "fromSymbol": "executeAsync",
+        "fromSymbol": "executeRegisteredToolAsync",
         "toSymbol": "assertWriteApprovalAsync",
         "callExpression": "assertWriteApprovalAsync",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {
-        "fromSymbol": "executeAsync",
+        "fromSymbol": "executeRegisteredToolAsync",
+        "toSymbol": "recordRequiredAsync",
+        "callExpression": "recordRequiredAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeRegisteredToolAsync",
+        "toSymbol": "executeAndAuditAsync",
+        "callExpression": "executeAndAuditAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeRegisteredToolAsync",
+        "toSymbol": "recordBestEffortAsync",
+        "callExpression": "recordBestEffortAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAndAuditAsync",
         "toSymbol": "executeAsync",
         "callExpression": "registeredTool.tool.executeAsync",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {
-        "fromSymbol": "executeAsync",
-        "toSymbol": "recordAsync",
-        "callExpression": "recordAsync",
+        "fromSymbol": "executeAndAuditAsync",
+        "toSymbol": "assertSchema",
+        "callExpression": "assertSchema",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAndAuditAsync",
+        "toSymbol": "recordOutcomeAsync",
+        "callExpression": "recordOutcomeAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "recordOutcomeAsync",
+        "toSymbol": "recordRequiredAsync",
+        "callExpression": "recordRequiredAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "recordOutcomeAsync",
+        "toSymbol": "recordBestEffortAsync",
+        "callExpression": "recordBestEffortAsync",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {
@@ -2013,12 +2677,18 @@
       },
       {
         "fromSymbol": "denyAsync",
-        "toSymbol": "recordAsync",
-        "callExpression": "recordAsync",
+        "toSymbol": "recordBestEffortAsync",
+        "callExpression": "recordBestEffortAsync",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {
-        "fromSymbol": "recordAsync",
+        "fromSymbol": "recordBestEffortAsync",
+        "toSymbol": "recordAsync",
+        "callExpression": "auditSink?.recordAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "recordRequiredAsync",
         "toSymbol": "recordAsync",
         "callExpression": "auditSink?.recordAsync",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
@@ -2114,11 +2784,6 @@
       {
         "fromSymbol": "McpRegistry",
         "toType": "RegisteredMcpTool",
-        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
-      },
-      {
-        "fromSymbol": "RegisteredMcpTool",
-        "toType": "McpTool",
         "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
       },
       {

@@ -4,7 +4,7 @@
 
 Kind: `function`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:37:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:33:1`
 
 Create a deterministic registry that enforces account and mutation boundaries.
 
@@ -48,7 +48,7 @@ Source: `src/features/transport/composition/createMcpStdioServerAsync.ts:10:1`
 
 Kind: `function`
 Module: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts`
-Source: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts:12:1`
+Source: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts:14:1`
 
 Discover configured package exports without resolving arbitrary filesystem paths.
 
@@ -62,7 +62,7 @@ Discover configured package exports without resolving arbitrary filesystem paths
 
 Kind: `type`
 Module: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts`
-Source: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts:6:1`
+Source: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts:8:1`
 
 ### Members
 
@@ -136,7 +136,7 @@ Source: `src/types/public.ts:80:1`
 | accountId | property | `string \| null` | yes |  |
 | actorId | property | `string` | yes |  |
 | errorCode | property | `string` | no |  |
-| outcome | property | `"denied" \| "executed" \| "failed"` | yes |  |
+| outcome | property | `"denied" \| "executed" \| "failed" \| "intent"` | yes |  |
 | risk | property | `McpRisk` | yes |  |
 | toolId | property | `string` | yes |  |
 
@@ -271,14 +271,6 @@ Source: `src/types/public.ts:10:1`
 
 ## RegisteredMcpTool
 
-Kind: `type`
+Kind: `unknown`
 Module: `src/features/registry/application/createMcpRegistry.ts`
 Source: `src/features/registry/application/createMcpRegistry.ts:23:1`
-
-### Members
-
-| Name | Kind | Type | Required | Description |
-| --- | --- | --- | --- | --- |
-| integrationId | property | `string` | yes |  |
-| tool | property | `McpTool` | yes |  |
-| toolId | property | `string` | yes |  |

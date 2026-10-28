@@ -1,6 +1,6 @@
 {
   "name": "@ankhorage/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Secure, provider-neutral MCP runtime and Ankh CLI provider.",
   "license": "MIT",
   "type": "module",

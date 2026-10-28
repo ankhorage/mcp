@@ -10,7 +10,7 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 37,
+      "line": 33,
       "column": 1
     },
     "exportPaths": [
@@ -149,7 +149,7 @@
     "modulePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
     "sourceLocation": {
       "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-      "line": 12,
+      "line": 14,
       "column": 1
     },
     "exportPaths": [
@@ -188,7 +188,7 @@
     "modulePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
     "sourceLocation": {
       "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
-      "line": 6,
+      "line": 8,
       "column": 1
     },
     "exportPaths": [
@@ -471,7 +471,7 @@
       {
         "name": "outcome",
         "kind": "property",
-        "type": "\"denied\" | \"executed\" | \"failed\"",
+        "type": "\"denied\" | \"executed\" | \"failed\" | \"intent\"",
         "required": true,
         "description": null
       },
@@ -944,7 +944,7 @@
     "isReadme": false,
     "see": [],
     "security": [],
-    "kind": "type",
+    "kind": "unknown",
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
@@ -954,33 +954,9 @@
     "exportPaths": [
       "src/index.ts"
     ],
-    "relatedSymbols": [
-      "McpTool"
-    ],
+    "relatedSymbols": [],
     "signatures": [],
-    "members": [
-      {
-        "name": "integrationId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "tool",
-        "kind": "property",
-        "type": "McpTool",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "toolId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      }
-    ],
+    "members": [],
     "structuredRows": []
   }
 ]
