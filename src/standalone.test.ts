@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -10,8 +10,10 @@ test('accepts the packed package through independent Node, Bun, MCP, Ankh, and s
   const consumer = await createPackedConsumerAsync();
   try {
     await assertExportsAsync(consumer);
+    await assertNodeDiscoveryAsync(consumer);
     await assertAnkhCliAsync(consumer);
     await assertMcpStdioAsync(consumer);
+    await assertMcpServeAccountScopeAsync(consumer);
     await assertSecurityAsync(consumer);
   } finally {
     await rm(consumer, { force: true, recursive: true });
@@ -19,10 +21,16 @@ test('accepts the packed package through independent Node, Bun, MCP, Ankh, and s
 });
 
 async function createPackedConsumerAsync(): Promise<string> {
-  const consumer = await mkdtemp(join(getTemporaryDirectory(), 'ankhorage-mcp-consumer-'));
-  const artifact = join(repositoryRoot, 'ankhorage-mcp-0.1.0.tgz');
+  const temporaryDirectory = getTemporaryDirectory();
+  await mkdir(temporaryDirectory, { recursive: true });
+  const consumer = await mkdtemp(join(temporaryDirectory, 'ankhorage-mcp-consumer-'));
+  let artifact: string | undefined;
   try {
     await runCommandAsync(['bun', 'pm', 'pack'], repositoryRoot);
+    const artifacts = (await readdir(repositoryRoot)).filter((entry) => entry.endsWith('.tgz'));
+    if (artifacts.length !== 1 || artifacts[0] === undefined)
+      throw new Error('Expected bun pm pack to produce exactly one package artifact.');
+    artifact = join(repositoryRoot, artifacts[0]);
     const packageJson = JSON.parse(
       await readFile(join(repositoryRoot, 'package.json'), 'utf8'),
     ) as {
@@ -53,7 +61,7 @@ async function createPackedConsumerAsync(): Promise<string> {
     await rm(consumer, { force: true, recursive: true });
     throw error;
   } finally {
-    await rm(artifact, { force: true });
+    if (artifact !== undefined) await rm(artifact, { force: true });
   }
 }
 
@@ -61,7 +69,10 @@ async function assertExportsAsync(consumer: string): Promise<void> {
   await writeFile(
     join(consumer, 'exports.mjs'),
     "import * as mcp from '@ankhorage/mcp';\n" +
-      "if (typeof mcp.createMcpRegistry !== 'function' || typeof mcp.createMcpStdioServerAsync !== 'function' || typeof mcp.discoverMcpIntegrationsAsync !== 'function') throw new Error('missing public export');\n",
+      "import provider from '@ankhorage/mcp/cli';\n" +
+      "import manifest from '@ankhorage/mcp/package.json' with { type: 'json' };\n" +
+      "if (typeof mcp.createMcpRegistry !== 'function' || typeof mcp.createMcpStdioServerAsync !== 'function' || typeof mcp.discoverMcpIntegrationsAsync !== 'function') throw new Error('missing public export');\n" +
+      "if (provider.version !== manifest.version) throw new Error('CLI provider version is not synchronized with package metadata');\n",
     'utf8',
   );
   await runCommandAsync(['node', 'exports.mjs'], consumer);
@@ -72,6 +83,17 @@ async function assertExportsAsync(consumer: string): Promise<void> {
   );
   expect(installedManifest).not.toContain('workspace:');
   expect(installedManifest).not.toContain('file:');
+}
+
+async function assertNodeDiscoveryAsync(consumer: string): Promise<void> {
+  await writeFile(
+    join(consumer, 'node-discovery.mjs'),
+    "import { discoverMcpIntegrationsAsync } from '@ankhorage/mcp';\n" +
+      "const integrations = await discoverMcpIntegrationsAsync({ cwd: process.cwd(), packageNames: ['@fixture/provider'] });\n" +
+      "if (integrations.length !== 1 || integrations[0]?.id !== 'fixture') throw new Error('Node ESM consumer discovery failed');\n",
+    'utf8',
+  );
+  await runCommandAsync(['node', 'node-discovery.mjs'], consumer);
 }
 
 async function assertAnkhCliAsync(consumer: string): Promise<void> {
@@ -104,10 +126,37 @@ async function assertMcpStdioAsync(consumer: string): Promise<void> {
       'const protocolErrors = []; transport.onerror = (error) => protocolErrors.push(String(error));\n' +
       "const client = new Client({ name: 'acceptance-client', version: '1.0.0' }, { capabilities: {} });\n" +
       "await client.connect(transport); const tools = await client.listTools(); const result = await client.callTool({ name: 'fixture.echo', arguments: {} }); await client.close();\n" +
-      "if (tools.tools.length !== 1 || tools.tools[0].name !== 'fixture.echo' || result.content[0]?.text !== '{\\\"ok\\\":true}' || protocolErrors.length !== 0) throw new Error('MCP STDIO protocol acceptance failed');\n",
+      "if (tools.tools.length !== 2 || !tools.tools.some((tool) => tool.name === 'fixture.echo') || result.content[0]?.text !== '{\\\"ok\\\":true}' || protocolErrors.length !== 0) throw new Error('MCP STDIO protocol acceptance failed');\n",
     'utf8',
   );
   await runCommandAsync(['bun', 'mcp-client.mjs'], consumer);
+}
+
+async function assertMcpServeAccountScopeAsync(consumer: string): Promise<void> {
+  await mkdir(join(consumer, '.ankh'), { recursive: true });
+  await writeFile(
+    join(consumer, '.ankh', 'mcp.json'),
+    '{"allowedAccounts":["allowed"],"packages":["@fixture/provider"]}\n',
+    'utf8',
+  );
+  await writeFile(
+    join(consumer, 'ankh-serve.mjs'),
+    "import { discoverAnkhPackages, runCli } from '@ankhorage/ankh';\n" +
+      "const context = { cwd: process.cwd(), env: process.env, version: 'test', writeStdout: () => {}, writeStderr: () => {} };\n" +
+      "process.exitCode = (await runCli(['mcp', 'serve'], { context, discoverPackages: discoverAnkhPackages })).exitCode;\n",
+    'utf8',
+  );
+  await writeFile(
+    join(consumer, 'mcp-serve-client.mjs'),
+    "import { Client } from '@modelcontextprotocol/sdk/client/index.js';\n" +
+      "import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';\n" +
+      "const client = new Client({ name: 'acceptance-client', version: '1.0.0' }, { capabilities: {} });\n" +
+      "await client.connect(new StdioClientTransport({ command: 'bun', args: ['ankh-serve.mjs'], cwd: process.cwd(), stderr: 'pipe' }));\n" +
+      "const allowed = await client.callTool({ name: 'fixture.account-read', arguments: { accountId: 'allowed' } }); const denied = await client.callTool({ name: 'fixture.account-read', arguments: { accountId: 'other' } }); await client.close();\n" +
+      "if (allowed.isError || allowed.content[0]?.text !== '{\\\"accountId\\\":\\\"allowed\\\"}' || !denied.isError || !denied.content[0]?.text?.includes('account-not-allowed')) throw new Error('CLI account scope acceptance failed');\n",
+    'utf8',
+  );
+  await runCommandAsync(['bun', 'mcp-serve-client.mjs'], consumer);
 }
 
 async function assertSecurityAsync(consumer: string): Promise<void> {
@@ -116,7 +165,7 @@ async function assertSecurityAsync(consumer: string): Promise<void> {
     "import { createMcpRegistry } from '@ankhorage/mcp';\n" +
       "const secret = 'acceptance-secret'; const context = { actorId: 'acceptance', allowedAccounts: ['allowed'], approvalToken: 'approval' };\n" +
       "const tool = { id: 'write', title: 'Write', description: 'Write fixture', risk: 'write', scope: 'account', accountId: (input) => typeof input.accountId === 'string' ? input.accountId : null, inputSchema: { type: 'object', required: ['accountId'], properties: { accountId: { type: 'string' } }, additionalProperties: false }, describeChangeAsync: async () => ({ resourceId: 'fixture', before: {}, after: {} }), verifyExpectedStateAsync: async () => true, executeAsync: async () => { throw new Error(secret); } };\n" +
-      "const execute = async (verifier, invocationContext = context) => createMcpRegistry({ auditSink: { recordAsync: async () => { throw new Error(secret); } }, integrations: [{ id: 'fixture', tools: [tool] }], ...(verifier === undefined ? {} : { approvalVerifier: verifier }) }).executeAsync('fixture.write', { accountId: 'allowed' }, invocationContext);\n" +
+      "const execute = async (verifier, invocationContext = context) => createMcpRegistry({ auditSink: { recordAsync: async () => {} }, integrations: [{ id: 'fixture', tools: [tool] }], ...(verifier === undefined ? {} : { approvalVerifier: verifier }) }).executeAsync('fixture.write', { accountId: 'allowed' }, invocationContext);\n" +
       "const expectFailure = async (promise, message) => { try { await promise; throw new Error('expected rejection'); } catch (error) { if (!(error instanceof Error) || !error.message.includes(message) || error.message.includes(secret)) throw error; } };\n" +
       "await expectFailure(execute(undefined), 'externally issued');\n" +
       "await expectFailure(execute({ verifyAndConsumeAsync: async () => true }, { ...context, allowedAccounts: [] }), 'account-not-allowed');\n" +
@@ -139,7 +188,7 @@ async function writeProviderFixtureAsync(consumer: string): Promise<void> {
   );
   await writeFile(
     join(providerDirectory, 'mcp.js'),
-    "export const integration = { id: 'fixture', tools: [{ id: 'echo', title: 'Echo', description: 'Echo fixture', risk: 'read', scope: 'global', inputSchema: { type: 'object', additionalProperties: false }, executeAsync: async () => ({ ok: true }) }] };\n",
+    "export const integration = { id: 'fixture', tools: [{ id: 'echo', title: 'Echo', description: 'Echo fixture', risk: 'read', scope: 'global', inputSchema: { type: 'object', additionalProperties: false }, executeAsync: async () => ({ ok: true }) }, { id: 'account-read', title: 'Account read', description: 'Read account fixture', risk: 'read', scope: 'account', accountId: (input) => typeof input.accountId === 'string' ? input.accountId : null, inputSchema: { type: 'object', required: ['accountId'], properties: { accountId: { type: 'string' } }, additionalProperties: false }, executeAsync: async (input) => ({ accountId: input.accountId }) }] };\n",
     'utf8',
   );
 }

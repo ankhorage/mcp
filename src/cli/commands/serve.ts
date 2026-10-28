@@ -1,26 +1,19 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-
 import type { AnkhCommandExecutionRequest } from '@ankhorage/ankh';
 
+import { readMcpConfigurationAsync } from '../../features/config/application/readMcpConfigurationAsync.js';
 import { discoverMcpIntegrationsAsync } from '../../features/discovery/application/discoverMcpIntegrationsAsync.js';
 import { createMcpStdioServerAsync } from '../../features/transport/composition/createMcpStdioServerAsync.js';
 
 /*** Serve configured provider tools over STDIO with explicit account scope only. */
 export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exitCode: number }> {
   try {
-    const config = JSON.parse(
-      await readFile(join(request.context.cwd, '.ankh', 'mcp.json'), 'utf8'),
-    ) as { packages?: unknown };
-    const packageNames = Array.isArray(config.packages)
-      ? config.packages.filter((value): value is string => typeof value === 'string')
-      : [];
+    const configuration = await readMcpConfigurationAsync(request.context.cwd);
     const integrations = await discoverMcpIntegrationsAsync({
       cwd: request.context.cwd,
-      packageNames,
+      packageNames: configuration.packages ?? [],
     });
     await createMcpStdioServerAsync({
-      context: { actorId: 'stdio', allowedAccounts: [] },
+      context: { actorId: 'stdio', allowedAccounts: configuration.allowedAccounts ?? [] },
       integrations,
       version: request.context.version,
     });

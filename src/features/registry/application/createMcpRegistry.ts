@@ -20,11 +20,7 @@ export interface McpRegistry {
   listTools(): readonly RegisteredMcpTool[];
 }
 
-export interface RegisteredMcpTool {
-  readonly integrationId: string;
-  readonly tool: McpTool;
-  readonly toolId: string;
-}
+export type RegisteredMcpTool = Readonly<{ integrationId: string; tool: McpTool; toolId: string }>;
 
 export interface CreateMcpRegistryOptions {
   readonly approvalVerifier?: McpApprovalVerifier;
@@ -45,43 +41,108 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
       const registeredTool = toolsById.get(toolId);
       if (registeredTool === undefined)
         return denyAsync(options.auditSink, toolId, context, null, 'unknown-tool');
-      try {
-        assertSchema(input, registeredTool.tool.inputSchema, 'input');
-        const accountId = getAuthorizedAccountId(registeredTool, input, context, options.auditSink);
-        await assertWriteApprovalAsync(
-          registeredTool,
-          input,
-          context,
-          options.approvalVerifier,
-          await accountId,
-          options.now ?? (() => new Date()),
-        );
-        const output = await registeredTool.tool.executeAsync(input, context);
-        if (registeredTool.tool.outputSchema !== undefined)
-          assertSchema(output, registeredTool.tool.outputSchema, 'output');
-        await recordAsync(options.auditSink, {
-          accountId: await accountId,
-          actorId: context.actorId,
-          outcome: 'executed',
-          risk: registeredTool.tool.risk,
-          toolId,
-        });
-        return output;
-      } catch (error) {
-        await recordAsync(options.auditSink, {
-          accountId: null,
-          actorId: context.actorId,
-          errorCode: 'execution-rejected',
-          outcome: 'failed',
-          risk: registeredTool.tool.risk,
-          toolId,
-        });
-        if (error instanceof McpRequestError) throw error;
-        throw new McpRequestError('MCP tool execution failed.');
-      }
+      return await executeRegisteredToolAsync(registeredTool, toolId, input, context, options);
     },
     listTools: () => registeredTools,
   };
+}
+
+/*** Enforce one registered tool boundary before it reaches its provider implementation. */
+async function executeRegisteredToolAsync(
+  registeredTool: RegisteredMcpTool,
+  toolId: string,
+  input: Readonly<Record<string, unknown>>,
+  context: McpToolExecutionContext,
+  options: CreateMcpRegistryOptions,
+): Promise<unknown> {
+  try {
+    assertSchema(input, registeredTool.tool.inputSchema, 'input');
+    const accountId = await getAuthorizedAccountId(
+      registeredTool,
+      input,
+      context,
+      options.auditSink,
+    );
+    await assertWriteApprovalAsync(
+      registeredTool,
+      input,
+      context,
+      options.approvalVerifier,
+      accountId,
+      options.now ?? (() => new Date()),
+    );
+    if (registeredTool.tool.risk === 'write')
+      await recordRequiredAsync(options.auditSink, {
+        accountId,
+        actorId: context.actorId,
+        outcome: 'intent',
+        risk: 'write',
+        toolId,
+      });
+    return await executeAndAuditAsync(registeredTool, input, context, accountId, options.auditSink);
+  } catch (error) {
+    if (!(error instanceof McpRequestError))
+      await recordBestEffortAsync(options.auditSink, {
+        accountId: null,
+        actorId: context.actorId,
+        errorCode: 'execution-rejected',
+        outcome: 'failed',
+        risk: registeredTool.tool.risk,
+        toolId,
+      });
+    if (error instanceof McpRequestError) throw error;
+    throw new McpRequestError('MCP tool execution failed.');
+  }
+}
+
+/*** Execute one authorized tool and durably record write outcomes without exposing provider failures. */
+async function executeAndAuditAsync(
+  registeredTool: RegisteredMcpTool,
+  input: Readonly<Record<string, unknown>>,
+  context: McpToolExecutionContext,
+  accountId: string | null,
+  auditSink: McpAuditSink | undefined,
+): Promise<unknown> {
+  let output: unknown;
+  try {
+    output = await registeredTool.tool.executeAsync(input, context);
+    if (registeredTool.tool.outputSchema !== undefined)
+      assertSchema(output, registeredTool.tool.outputSchema, 'output');
+  } catch (error) {
+    try {
+      await recordOutcomeAsync(auditSink, registeredTool, context, accountId, 'failed');
+    } catch {
+      throw new McpRequestError('MCP write outcome could not be durably recorded.');
+    }
+    if (error instanceof McpRequestError) throw error;
+    throw new McpRequestError('MCP tool execution failed.');
+  }
+  try {
+    await recordOutcomeAsync(auditSink, registeredTool, context, accountId, 'executed');
+  } catch {
+    throw new McpRequestError('MCP write outcome could not be durably recorded.');
+  }
+  return output;
+}
+
+/*** Record the terminal outcome according to the read best-effort and write durable-audit policies. */
+async function recordOutcomeAsync(
+  auditSink: McpAuditSink | undefined,
+  registeredTool: RegisteredMcpTool,
+  context: McpToolExecutionContext,
+  accountId: string | null,
+  outcome: 'executed' | 'failed',
+): Promise<void> {
+  const event = {
+    accountId,
+    actorId: context.actorId,
+    ...(outcome === 'failed' ? { errorCode: 'execution-rejected' } : {}),
+    outcome,
+    risk: registeredTool.tool.risk,
+    toolId: registeredTool.toolId,
+  } as const;
+  if (registeredTool.tool.risk === 'write') return await recordRequiredAsync(auditSink, event);
+  await recordBestEffortAsync(auditSink, event);
 }
 
 /*** Reject missing account identity unless a tool explicitly declares global scope. */
@@ -169,7 +230,7 @@ async function denyAsync(
   accountId: string | null,
   errorCode: string,
 ): Promise<never> {
-  await recordAsync(auditSink, {
+  await recordBestEffortAsync(auditSink, {
     accountId,
     actorId: context.actorId,
     errorCode,
@@ -183,8 +244,8 @@ async function denyAsync(
 /*** Identify boundary failures whose deterministic messages are safe to return to clients. */
 class McpRequestError extends Error {}
 
-/*** Record audit events without allowing observability failure to bypass enforcement. */
-async function recordAsync(
+/*** Record reads and denials opportunistically without changing their authorization decision. */
+async function recordBestEffortAsync(
   auditSink: McpAuditSink | undefined,
   event: Parameters<McpAuditSink['recordAsync']>[0],
 ): Promise<void> {
@@ -192,6 +253,19 @@ async function recordAsync(
     await auditSink?.recordAsync(event);
   } catch {
     // Audit delivery must not alter an authorization decision or expose sink failures to clients.
+  }
+}
+
+/*** Require a durable audit record for each write intent and terminal write outcome. */
+async function recordRequiredAsync(
+  auditSink: McpAuditSink | undefined,
+  event: Parameters<McpAuditSink['recordAsync']>[0],
+): Promise<void> {
+  try {
+    await auditSink?.recordAsync(event);
+    if (auditSink === undefined) throw new Error('audit sink is unavailable');
+  } catch {
+    throw new McpRequestError('MCP write rejected because durable audit recording is unavailable.');
   }
 }
 

@@ -51,7 +51,17 @@ const provider: AnkhRuntimeCommandProvider = {
     { handler: serve, path: ['serve'] },
   ],
   id: '@ankhorage/mcp',
-  version: '0.1.0',
+  version: readPackageVersion(),
 };
 
 export default provider;
+import { createRequire } from 'node:module';
+
+/*** Read the installed package version so CLI discovery always reports the published artifact version. */
+function readPackageVersion(): string {
+  const packageMetadata = createRequire(import.meta.url)('../../package.json') as {
+    version?: unknown;
+  };
+  if (typeof packageMetadata.version !== 'string') throw new Error('Invalid MCP package version.');
+  return packageMetadata.version;
+}

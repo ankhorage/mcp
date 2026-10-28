@@ -50,6 +50,157 @@ test('never executes writes without external approval', () => {
   ).rejects.toThrow('externally issued');
 });
 
+test('rejects a write before mutation when its required audit intent cannot be recorded', async () => {
+  let executed = false;
+  const registry = createMcpRegistry({
+    approvalVerifier: { verifyAndConsumeAsync: () => Promise.resolve(true) },
+    auditSink: { recordAsync: () => Promise.reject(new Error('audit unavailable')) },
+    integrations: [
+      {
+        ...readIntegration,
+        tools: [
+          {
+            ...readTool,
+            describeChangeAsync: () =>
+              Promise.resolve({ after: {}, before: {}, resourceId: 'test' }),
+            executeAsync: () => {
+              executed = true;
+              return Promise.resolve({ ok: true });
+            },
+            id: 'write',
+            risk: 'write',
+            verifyExpectedStateAsync: () => Promise.resolve(true),
+          },
+        ],
+      },
+    ],
+  });
+  await expectFailureAsync(
+    registry.executeAsync(
+      'example.write',
+      { accountId: 'allowed' },
+      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+    ),
+    'durable audit recording is unavailable',
+  );
+  expect(executed).toBe(false);
+});
+
+test('records durable write intent and success after a valid approval', async () => {
+  const outcomes: string[] = [];
+  const registry = createMcpRegistry({
+    approvalVerifier: { verifyAndConsumeAsync: () => Promise.resolve(true) },
+    auditSink: {
+      recordAsync: (event) => {
+        outcomes.push(event.outcome);
+        return Promise.resolve();
+      },
+    },
+    integrations: [
+      {
+        ...readIntegration,
+        tools: [
+          {
+            ...readTool,
+            describeChangeAsync: () =>
+              Promise.resolve({ after: {}, before: {}, resourceId: 'test' }),
+            id: 'write',
+            risk: 'write',
+            verifyExpectedStateAsync: () => Promise.resolve(true),
+          },
+        ],
+      },
+    ],
+  });
+  expect(
+    await registry.executeAsync(
+      'example.write',
+      { accountId: 'allowed' },
+      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+    ),
+  ).toEqual({ ok: true });
+  expect(outcomes).toEqual(['intent', 'executed']);
+});
+
+test('records a durable failure outcome without exposing provider failures', async () => {
+  const outcomes: string[] = [];
+  const registry = createMcpRegistry({
+    approvalVerifier: { verifyAndConsumeAsync: () => Promise.resolve(true) },
+    auditSink: {
+      recordAsync: (event) => {
+        outcomes.push(event.outcome);
+        return Promise.resolve();
+      },
+    },
+    integrations: [
+      {
+        ...readIntegration,
+        tools: [
+          {
+            ...readTool,
+            describeChangeAsync: () =>
+              Promise.resolve({ after: {}, before: {}, resourceId: 'test' }),
+            executeAsync: () => Promise.reject(new Error('provider-secret')),
+            id: 'write',
+            risk: 'write',
+            verifyExpectedStateAsync: () => Promise.resolve(true),
+          },
+        ],
+      },
+    ],
+  });
+  await expectFailureAsync(
+    registry.executeAsync(
+      'example.write',
+      { accountId: 'allowed' },
+      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+    ),
+    'MCP tool execution failed.',
+  );
+  expect(outcomes).toEqual(['intent', 'failed']);
+});
+
+test('reports an unrecorded write outcome after mutation when its terminal audit record fails', async () => {
+  let executed = false;
+  const registry = createMcpRegistry({
+    approvalVerifier: { verifyAndConsumeAsync: () => Promise.resolve(true) },
+    auditSink: {
+      recordAsync: (event) =>
+        event.outcome === 'executed'
+          ? Promise.reject(new Error('audit unavailable'))
+          : Promise.resolve(),
+    },
+    integrations: [
+      {
+        ...readIntegration,
+        tools: [
+          {
+            ...readTool,
+            describeChangeAsync: () =>
+              Promise.resolve({ after: {}, before: {}, resourceId: 'test' }),
+            executeAsync: () => {
+              executed = true;
+              return Promise.resolve({ ok: true });
+            },
+            id: 'write',
+            risk: 'write',
+            verifyExpectedStateAsync: () => Promise.resolve(true),
+          },
+        ],
+      },
+    ],
+  });
+  await expectFailureAsync(
+    registry.executeAsync(
+      'example.write',
+      { accountId: 'allowed' },
+      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+    ),
+    'write outcome could not be durably recorded',
+  );
+  expect(executed).toBe(true);
+});
+
 test('rejects an account-scoped tool when its provider cannot identify an account', () => {
   const registry = createMcpRegistry({
     integrations: [{ ...readIntegration, tools: [{ ...readTool, accountId: () => null }] }],

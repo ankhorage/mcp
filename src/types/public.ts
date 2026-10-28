@@ -81,7 +81,7 @@ export interface McpAuditEvent {
   readonly accountId: string | null;
   readonly actorId: string;
   readonly errorCode?: string;
-  readonly outcome: 'denied' | 'executed' | 'failed';
+  readonly outcome: 'denied' | 'executed' | 'failed' | 'intent';
   readonly risk: McpRisk;
   readonly toolId: string;
 }
