@@ -7,6 +7,7 @@ import { expect, test } from 'bun:test';
 const repositoryRoot = dirname(import.meta.dir);
 
 test('accepts the packed package through independent Node, Bun, MCP, Ankh, and security consumers', async () => {
+  await assertCapabilityMaterializationAsync();
   const consumer = await createPackedConsumerAsync();
   try {
     await assertExportsAsync(consumer);
@@ -18,7 +19,18 @@ test('accepts the packed package through independent Node, Bun, MCP, Ankh, and s
   } finally {
     await rm(consumer, { force: true, recursive: true });
   }
-});
+}, 30_000);
+
+async function assertCapabilityMaterializationAsync(): Promise<void> {
+  await runCommandAsync(
+    ['bunx', '--bun', '--no-install', 'ankhorage-repository', 'package', 'sync', '.'],
+    repositoryRoot,
+  );
+  await runCommandAsync(
+    ['bunx', '--bun', '--no-install', 'ankhorage-repository', 'package', 'status', '.'],
+    repositoryRoot,
+  );
+}
 
 async function createPackedConsumerAsync(): Promise<string> {
   const temporaryDirectory = getTemporaryDirectory();
@@ -68,10 +80,13 @@ async function createPackedConsumerAsync(): Promise<string> {
 async function assertExportsAsync(consumer: string): Promise<void> {
   await writeFile(
     join(consumer, 'exports.mjs'),
-    "import * as mcp from '@ankhorage/mcp';\n" +
+    "import { isDeepStrictEqual } from 'node:util';\n" +
+      "import * as mcp from '@ankhorage/mcp';\n" +
+      "import { CAPABILITIES } from '@ankhorage/mcp/capabilities';\n" +
       "import provider from '@ankhorage/mcp/cli';\n" +
       "import manifest from '@ankhorage/mcp/package.json' with { type: 'json' };\n" +
       "if (typeof mcp.createMcpRegistry !== 'function' || typeof mcp.createMcpStdioServerAsync !== 'function' || typeof mcp.discoverMcpIntegrationsAsync !== 'function') throw new Error('missing public export');\n" +
+      "if (!isDeepStrictEqual(CAPABILITIES, manifest.ankh.capabilities) || !isDeepStrictEqual(provider.capabilities, CAPABILITIES)) throw new Error('capability catalogs are not synchronized');\n" +
       "if (provider.version !== manifest.version) throw new Error('CLI provider version is not synchronized with package metadata');\n",
     'utf8',
   );

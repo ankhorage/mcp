@@ -36,6 +36,10 @@
       "types": "./dist/cli/index.d.ts",
       "import": "./dist/cli/index.js"
     },
+    "./capabilities": {
+      "types": "./dist/capabilities/index.d.ts",
+      "import": "./dist/capabilities/index.js"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -48,56 +52,56 @@
     "category": "mcp",
     "capabilities": [
       {
-        "access": [
-          "invoke"
-        ],
-        "binding": {
-          "bindableAs": [
-            "target"
-          ],
-          "kind": "action"
-        },
         "id": "mcp.add",
-        "owner": "@ankhorage/mcp"
-      },
-      {
+        "owner": "@ankhorage/mcp",
         "access": [
           "invoke"
         ],
         "binding": {
+          "kind": "action",
           "bindableAs": [
             "target"
-          ],
-          "kind": "action"
-        },
+          ]
+        }
+      },
+      {
         "id": "mcp.list",
-        "owner": "@ankhorage/mcp"
-      },
-      {
+        "owner": "@ankhorage/mcp",
         "access": [
           "invoke"
         ],
         "binding": {
+          "kind": "action",
           "bindableAs": [
             "target"
-          ],
-          "kind": "action"
-        },
+          ]
+        }
+      },
+      {
         "id": "mcp.doctor",
-        "owner": "@ankhorage/mcp"
-      },
-      {
+        "owner": "@ankhorage/mcp",
         "access": [
           "invoke"
         ],
         "binding": {
+          "kind": "action",
           "bindableAs": [
             "target"
-          ],
-          "kind": "action"
-        },
+          ]
+        }
+      },
+      {
         "id": "mcp.serve",
-        "owner": "@ankhorage/mcp"
+        "owner": "@ankhorage/mcp",
+        "access": [
+          "invoke"
+        ],
+        "binding": {
+          "kind": "action",
+          "bindableAs": [
+            "target"
+          ]
+        }
       }
     ],
     "provider": "./dist/cli/index.js"
@@ -124,7 +128,7 @@
     "@modelcontextprotocol/sdk": "^1.32.2"
   },
   "devDependencies": {
-    "@ankhorage/devtools": "^2.3.31",
+    "@ankhorage/devtools": "^2.3.32",
     "@ankhorage/paradox": "^0.3.5",
     "@types/bun": "^1.4.2",
     "@types/node": "^26.6.5",

@@ -1,5 +1,6 @@
 import type { AnkhRuntimeCommandProvider } from '@ankhorage/ankh';
 
+import { CAPABILITIES } from '../capabilities/index.js';
 import { add } from './commands/add.js';
 import { doctor } from './commands/doctor.js';
 import { list } from './commands/list.js';
@@ -7,32 +8,7 @@ import { serve } from './commands/serve.js';
 
 /*** Expose MCP management commands through the Ankh provider mechanism. */
 const provider: AnkhRuntimeCommandProvider = {
-  capabilities: [
-    {
-      access: ['invoke'],
-      binding: { bindableAs: ['target'], kind: 'action' },
-      id: 'mcp.add',
-      owner: '@ankhorage/mcp',
-    },
-    {
-      access: ['invoke'],
-      binding: { bindableAs: ['target'], kind: 'action' },
-      id: 'mcp.list',
-      owner: '@ankhorage/mcp',
-    },
-    {
-      access: ['invoke'],
-      binding: { bindableAs: ['target'], kind: 'action' },
-      id: 'mcp.doctor',
-      owner: '@ankhorage/mcp',
-    },
-    {
-      access: ['invoke'],
-      binding: { bindableAs: ['target'], kind: 'action' },
-      id: 'mcp.serve',
-      owner: '@ankhorage/mcp',
-    },
-  ],
+  capabilities: CAPABILITIES,
   category: 'mcp',
   commands: [
     { capability: 'mcp.add', path: ['add'], summary: 'Add an installed MCP provider package.' },
