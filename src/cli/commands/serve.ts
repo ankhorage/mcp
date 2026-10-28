@@ -25,10 +25,8 @@ export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exi
       version: request.context.version,
     });
     return { exitCode: 0 };
-  } catch (error) {
-    request.context.writeStderr(
-      `MCP server failed to initialize: ${error instanceof Error ? error.message : 'unknown error'}\n`,
-    );
+  } catch {
+    request.context.writeStderr('MCP server failed to initialize.\n');
     return { exitCode: 1 };
   }
 }

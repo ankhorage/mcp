@@ -36,8 +36,15 @@ export async function createMcpStdioServerAsync(
       );
       return { content: [{ text: JSON.stringify(output), type: 'text' }] };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'MCP tool execution failed.';
-      return { content: [{ text: message, type: 'text' }], isError: true };
+      return {
+        content: [
+          {
+            text: error instanceof Error ? error.message : 'MCP tool execution failed.',
+            type: 'text',
+          },
+        ],
+        isError: true,
+      };
     }
   });
   await server.connect(new StdioServerTransport());

@@ -25,10 +25,8 @@ export async function doctor(request: AnkhCommandExecutionRequest): Promise<{ ex
     );
     for (const integration of integrations) await integration.closeAsync?.();
     return { exitCode: 0 };
-  } catch (error) {
-    request.context.writeStderr(
-      `MCP doctor failed: ${error instanceof Error ? error.message : 'unknown error'}\n`,
-    );
+  } catch {
+    request.context.writeStderr('MCP doctor failed.\n');
     return { exitCode: 1 };
   }
 }

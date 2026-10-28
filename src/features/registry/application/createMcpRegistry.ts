@@ -76,7 +76,8 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
           risk: registeredTool.tool.risk,
           toolId,
         });
-        throw error;
+        if (error instanceof McpRequestError) throw error;
+        throw new McpRequestError('MCP tool execution failed.');
       }
     },
     listTools: () => registeredTools,
@@ -137,12 +138,12 @@ async function assertWriteApprovalAsync(
     registeredTool.tool.describeChangeAsync === undefined ||
     registeredTool.tool.verifyExpectedStateAsync === undefined
   )
-    throw new Error(
+    throw new McpRequestError(
       'Write tools require an externally issued, durable approval and provider state verification.',
     );
   const change = await registeredTool.tool.describeChangeAsync(input, context);
   if (!(await registeredTool.tool.verifyExpectedStateAsync(input, context, change)))
-    throw new Error(
+    throw new McpRequestError(
       'Write approval is stale because provider state no longer matches the proposal.',
     );
   const proposal: McpApprovalProposal = {
@@ -155,7 +156,7 @@ async function assertWriteApprovalAsync(
     toolId: registeredTool.toolId,
   };
   if (!(await verifier.verifyAndConsumeAsync(proposal, context.approvalToken)))
-    throw new Error(
+    throw new McpRequestError(
       'The supplied approval is denied, expired, replayed, or bound to another operation.',
     );
 }
@@ -176,15 +177,22 @@ async function denyAsync(
     risk: 'read',
     toolId,
   });
-  throw new Error(`MCP request denied: ${errorCode}`);
+  throw new McpRequestError(`MCP request denied: ${errorCode}`);
 }
+
+/*** Identify boundary failures whose deterministic messages are safe to return to clients. */
+class McpRequestError extends Error {}
 
 /*** Record audit events without allowing observability failure to bypass enforcement. */
 async function recordAsync(
   auditSink: McpAuditSink | undefined,
   event: Parameters<McpAuditSink['recordAsync']>[0],
 ): Promise<void> {
-  await auditSink?.recordAsync(event);
+  try {
+    await auditSink?.recordAsync(event);
+  } catch {
+    // Audit delivery must not alter an authorization decision or expose sink failures to clients.
+  }
 }
 
 /*** Produce a canonical proposal fingerprint independent of property insertion order. */
@@ -212,18 +220,20 @@ function assertSchema(
   schema: McpJsonSchema,
   label: string,
 ): asserts value is Readonly<Record<string, unknown>> {
-  if (schema.type !== 'object') throw new Error(`MCP ${label} must match an object schema.`);
+  if (schema.type !== 'object')
+    throw new McpRequestError(`MCP ${label} must match an object schema.`);
   assertSchemaValue(value, schema, label);
 }
 
 /*** Recursively validate serializable provider values against the declared schema. */
 function assertSchemaValue(value: unknown, schema: McpJsonSchema, label: string): void {
-  if (!matchesType(value, schema.type)) throw new Error(`MCP ${label} must be ${schema.type}.`);
+  if (!matchesType(value, schema.type))
+    throw new McpRequestError(`MCP ${label} must be ${schema.type}.`);
   if (schema.type !== 'object') return;
   const record = new Map(Object.entries(value as Record<string, unknown>));
   for (const property of schema.required ?? [])
     if (!record.has(property))
-      throw new Error(`MCP ${label} is missing required property: ${property}`);
+      throw new McpRequestError(`MCP ${label} is missing required property: ${property}`);
   const declaredProperties = new Map(Object.entries(schema.properties ?? {}));
   for (const [property, propertySchema] of declaredProperties) {
     const candidate = record.get(property);
@@ -233,7 +243,7 @@ function assertSchemaValue(value: unknown, schema: McpJsonSchema, label: string)
   if (schema.additionalProperties === false)
     for (const property of record.keys())
       if (!declaredProperties.has(property))
-        throw new Error(`MCP ${label} has unknown property: ${property}`);
+        throw new McpRequestError(`MCP ${label} has unknown property: ${property}`);
 }
 
 /*** Match primitive JSON values against their declared schema type. */
