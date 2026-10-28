@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { expect, test } from 'bun:test';
@@ -18,7 +19,7 @@ test('accepts the packed package through independent Node, Bun, MCP, Ankh, and s
 });
 
 async function createPackedConsumerAsync(): Promise<string> {
-  const consumer = await mkdtemp('/private/tmp/ankhorage-mcp-consumer-');
+  const consumer = await mkdtemp(join(getTemporaryDirectory(), 'ankhorage-mcp-consumer-'));
   const artifact = join(repositoryRoot, 'ankhorage-mcp-0.1.0.tgz');
   try {
     await runCommandAsync(['bun', 'pm', 'pack'], repositoryRoot);
@@ -144,7 +145,7 @@ async function writeProviderFixtureAsync(consumer: string): Promise<void> {
 }
 
 async function runCommandAsync(command: readonly string[], cwd: string): Promise<void> {
-  const temporaryDirectory = '/private/tmp/ankhorage-mcp-command-temp';
+  const temporaryDirectory = getTemporaryDirectory();
   await mkdir(temporaryDirectory, { recursive: true });
   const child = Bun.spawn([...command], {
     cwd,
@@ -158,4 +159,8 @@ async function runCommandAsync(command: readonly string[], cwd: string): Promise
     new Response(child.stderr).text(),
   ]);
   if (exitCode !== 0) throw new Error(`${command.join(' ')} failed: ${stdout}${stderr}`);
+}
+
+function getTemporaryDirectory(): string {
+  return process.env.MCP_ACCEPTANCE_TMPDIR ?? tmpdir();
 }
