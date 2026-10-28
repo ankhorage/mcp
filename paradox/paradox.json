@@ -1,0 +1,2252 @@
+{
+  "packageName": "@ankhorage/mcp",
+  "packageId": "@ankhorage/mcp",
+  "description": "Secure, provider-neutral MCP runtime and Ankh CLI provider.",
+  "collaborators": null,
+  "donation": null,
+  "badges": [
+    {
+      "id": "license",
+      "label": "license",
+      "value": "MIT",
+      "color": "2563eb"
+    },
+    {
+      "id": "npm",
+      "label": "npm",
+      "value": "v0.1.0",
+      "color": "cb3837"
+    },
+    {
+      "id": "runtime",
+      "label": "runtime",
+      "value": "bun",
+      "color": "f59e0b"
+    },
+    {
+      "id": "typescript",
+      "label": "typescript",
+      "value": "strict",
+      "color": "2563eb"
+    },
+    {
+      "id": "eslint",
+      "label": "eslint",
+      "value": "checked",
+      "color": "0a7f3f"
+    },
+    {
+      "id": "prettier",
+      "label": "prettier",
+      "value": "checked",
+      "color": "0a7f3f"
+    },
+    {
+      "id": "build",
+      "label": "build",
+      "value": "checked",
+      "color": "0a7f3f"
+    },
+    {
+      "id": "tests",
+      "label": "tests",
+      "value": "checked",
+      "color": "0a7f3f"
+    },
+    {
+      "id": "docs",
+      "label": "paradox",
+      "value": "canonical",
+      "color": "0a7f3f"
+    }
+  ],
+  "usage": {
+    "packageName": "@ankhorage/mcp",
+    "command": "ankh mcp --help"
+  },
+  "usageEntries": [
+    {
+      "area": "examples",
+      "title": "Basic Usage",
+      "description": "`@ankhorage/mcp` centrally registers provider tools and enforces their declared account scope.\nProviders supply integrations through their published `./mcp` export; the runtime owns discovery,\nvalidation, approval enforcement, and transport.",
+      "language": "ts",
+      "code": "export const registry = createMcpRegistry({\n  integrations: [\n    {\n      id: 'example',\n      tools: [\n        {\n          description: 'Read account metadata.',\n          executeAsync: () => Promise.resolve({ status: 'ok' }),\n          id: 'account-status',\n          inputSchema: {\n            additionalProperties: false,\n            properties: { accountId: { type: 'string' } },\n            required: ['accountId'],\n            type: 'object',\n          },\n          risk: 'read',\n          scope: 'account',\n          title: 'Account status',\n          accountId: (input) =>\n            typeof input.accountId === 'string' ? input.accountId : null,\n        },\n      ],\n    },\n  ],\n});",
+      "sourcePath": "examples/basic-usage/index.ts",
+      "isReadme": true,
+      "see": [],
+      "security": []
+    }
+  ],
+  "exampleCount": 1,
+  "findings": [],
+  "config": null,
+  "entrypoints": [
+    "src/index.ts"
+  ],
+  "modules": [
+    {
+      "path": "src/cli/commands/add.ts",
+      "isEntrypoint": false,
+      "dependencies": [],
+      "exports": [
+        "add"
+      ]
+    },
+    {
+      "path": "src/cli/commands/doctor.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      ],
+      "exports": [
+        "doctor"
+      ]
+    },
+    {
+      "path": "src/cli/commands/list.ts",
+      "isEntrypoint": false,
+      "dependencies": [],
+      "exports": [
+        "list"
+      ]
+    },
+    {
+      "path": "src/cli/commands/serve.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      ],
+      "exports": [
+        "serve"
+      ]
+    },
+    {
+      "path": "src/cli/index.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/cli/commands/add.ts",
+        "src/cli/commands/doctor.ts",
+        "src/cli/commands/list.ts",
+        "src/cli/commands/serve.ts"
+      ],
+      "exports": [
+        "default"
+      ]
+    },
+    {
+      "path": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      ],
+      "exports": []
+    },
+    {
+      "path": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/types/public.ts"
+      ],
+      "exports": [
+        "discoverMcpIntegrationsAsync",
+        "DiscoverMcpIntegrationsOptions"
+      ]
+    },
+    {
+      "path": "src/features/registry/application/createMcpRegistry.test.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/registry/application/createMcpRegistry.ts"
+      ],
+      "exports": []
+    },
+    {
+      "path": "src/features/registry/application/createMcpRegistry.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/types/public.ts"
+      ],
+      "exports": [
+        "createMcpRegistry",
+        "CreateMcpRegistryOptions",
+        "McpRegistry",
+        "RegisteredMcpTool"
+      ]
+    },
+    {
+      "path": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/registry/application/createMcpRegistry.ts",
+        "src/types/public.ts"
+      ],
+      "exports": [
+        "createMcpStdioServerAsync",
+        "CreateMcpStdioServerOptions"
+      ]
+    },
+    {
+      "path": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+      "isEntrypoint": false,
+      "dependencies": [
+        "src/features/registry/application/createMcpRegistry.ts",
+        "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "src/types/public.ts"
+      ],
+      "exports": [
+        "createMcpStdioServerAsync",
+        "CreateMcpStdioServerOptions"
+      ]
+    },
+    {
+      "path": "src/index.ts",
+      "isEntrypoint": true,
+      "dependencies": [],
+      "exports": [
+        "createMcpRegistry",
+        "createMcpStdioServerAsync",
+        "CreateMcpStdioServerOptions",
+        "discoverMcpIntegrationsAsync",
+        "DiscoverMcpIntegrationsOptions",
+        "McpAccountScopedTool",
+        "McpApprovalProposal",
+        "McpApprovalVerifier",
+        "McpAuditEvent",
+        "McpAuditSink",
+        "McpChangeDescriptor",
+        "McpGlobalTool",
+        "McpIntegration",
+        "McpIntegrationModule",
+        "McpJsonSchema",
+        "McpRegistry",
+        "McpRisk",
+        "McpTool",
+        "McpToolExecutionContext",
+        "RegisteredMcpTool"
+      ]
+    },
+    {
+      "path": "src/types/public.ts",
+      "isEntrypoint": false,
+      "dependencies": [],
+      "exports": [
+        "McpAccountScopedTool",
+        "McpApprovalProposal",
+        "McpApprovalVerifier",
+        "McpAuditEvent",
+        "McpAuditSink",
+        "McpChangeDescriptor",
+        "McpGlobalTool",
+        "McpIntegration",
+        "McpIntegrationModule",
+        "McpJsonSchema",
+        "McpRisk",
+        "McpTool",
+        "McpToolExecutionContext"
+      ]
+    }
+  ],
+  "exports": [
+    {
+      "name": "createMcpRegistry",
+      "title": null,
+      "description": "Create a deterministic registry that enforces account and mutation boundaries.",
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "function",
+      "modulePath": "src/features/registry/application/createMcpRegistry.ts",
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 37,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpRegistry"
+      ],
+      "signatures": [
+        {
+          "label": "(options: CreateMcpRegistryOptions) => McpRegistry",
+          "parameters": [
+            {
+              "name": "options",
+              "type": "CreateMcpRegistryOptions",
+              "required": true,
+              "description": null
+            }
+          ],
+          "returnType": "McpRegistry",
+          "returnDescription": null
+        }
+      ],
+      "members": [],
+      "structuredRows": []
+    },
+    {
+      "name": "createMcpStdioServerAsync",
+      "title": null,
+      "description": "Compose the central registry with the STDIO delivery adapter.",
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "function",
+      "modulePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+      "sourceLocation": {
+        "filePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "line": 19,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "CreateMcpStdioServerOptions"
+      ],
+      "signatures": [
+        {
+          "label": "(options: CreateMcpStdioServerOptions) => Promise<{ closeAsync(): Promise<void>; }>",
+          "parameters": [
+            {
+              "name": "options",
+              "type": "CreateMcpStdioServerOptions",
+              "required": true,
+              "description": null
+            }
+          ],
+          "returnType": "Promise<{ closeAsync(): Promise<void>; }>",
+          "returnDescription": null
+        }
+      ],
+      "members": [],
+      "structuredRows": []
+    },
+    {
+      "name": "CreateMcpStdioServerOptions",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+      "sourceLocation": {
+        "filePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "line": 10,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpApprovalVerifier",
+        "McpAuditSink",
+        "McpIntegration",
+        "McpToolExecutionContext"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "approvalVerifier",
+          "kind": "property",
+          "type": "McpApprovalVerifier",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "auditSink",
+          "kind": "property",
+          "type": "McpAuditSink",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "context",
+          "kind": "property",
+          "type": "McpToolExecutionContext",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "integrations",
+          "kind": "property",
+          "type": "readonly McpIntegration[]",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "version",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "discoverMcpIntegrationsAsync",
+      "title": null,
+      "description": "Discover configured package exports without resolving arbitrary filesystem paths.",
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "function",
+      "modulePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 12,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "DiscoverMcpIntegrationsOptions",
+        "McpIntegration"
+      ],
+      "signatures": [
+        {
+          "label": "(options: DiscoverMcpIntegrationsOptions) => Promise<readonly McpIntegration[]>",
+          "parameters": [
+            {
+              "name": "options",
+              "type": "DiscoverMcpIntegrationsOptions",
+              "required": true,
+              "description": null
+            }
+          ],
+          "returnType": "Promise<readonly McpIntegration[]>",
+          "returnDescription": null
+        }
+      ],
+      "members": [],
+      "structuredRows": []
+    },
+    {
+      "name": "DiscoverMcpIntegrationsOptions",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 6,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [],
+      "signatures": [],
+      "members": [
+        {
+          "name": "cwd",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "packageNames",
+          "kind": "property",
+          "type": "readonly string[]",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpAccountScopedTool",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 44,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpChangeDescriptor",
+        "McpJsonSchema",
+        "McpRisk",
+        "McpToolExecutionContext"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "accountId",
+          "kind": "method",
+          "type": "(input: Readonly<Record<string, unknown>>) => string | null",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "describeChangeAsync",
+          "kind": "method",
+          "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<McpChangeDescriptor>",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "description",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "executeAsync",
+          "kind": "property",
+          "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "id",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "inputSchema",
+          "kind": "property",
+          "type": "McpJsonSchema",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "outputSchema",
+          "kind": "property",
+          "type": "McpJsonSchema",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "risk",
+          "kind": "property",
+          "type": "McpRisk",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "scope",
+          "kind": "property",
+          "type": "\"account\"",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "title",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "verifyExpectedStateAsync",
+          "kind": "method",
+          "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<boolean>",
+          "required": false,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpApprovalProposal",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 66,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpChangeDescriptor"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "accountId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "actorId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "change",
+          "kind": "property",
+          "type": "McpChangeDescriptor",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "expiresAt",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "fingerprint",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "operation",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "toolId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpApprovalVerifier",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 76,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpApprovalProposal"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "verifyAndConsumeAsync",
+          "kind": "method",
+          "type": "(proposal: McpApprovalProposal, token: string) => Promise<boolean>",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpAuditEvent",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 80,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpRisk"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "accountId",
+          "kind": "property",
+          "type": "string | null",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "actorId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "errorCode",
+          "kind": "property",
+          "type": "string",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "outcome",
+          "kind": "property",
+          "type": "\"denied\" | \"executed\" | \"failed\"",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "risk",
+          "kind": "property",
+          "type": "McpRisk",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "toolId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpAuditSink",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 89,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpAuditEvent"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "recordAsync",
+          "kind": "method",
+          "type": "(event: McpAuditEvent) => Promise<void>",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpChangeDescriptor",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 16,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [],
+      "signatures": [],
+      "members": [
+        {
+          "name": "after",
+          "kind": "property",
+          "type": "Readonly<Record<string, unknown>> | null",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "before",
+          "kind": "property",
+          "type": "Readonly<Record<string, unknown>> | null",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "resourceId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpGlobalTool",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 49,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpChangeDescriptor",
+        "McpJsonSchema",
+        "McpRisk",
+        "McpToolExecutionContext"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "describeChangeAsync",
+          "kind": "method",
+          "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<McpChangeDescriptor>",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "description",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "executeAsync",
+          "kind": "property",
+          "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "id",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "inputSchema",
+          "kind": "property",
+          "type": "McpJsonSchema",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "outputSchema",
+          "kind": "property",
+          "type": "McpJsonSchema",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "risk",
+          "kind": "property",
+          "type": "McpRisk",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "scope",
+          "kind": "property",
+          "type": "\"global\"",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "title",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "verifyExpectedStateAsync",
+          "kind": "method",
+          "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<boolean>",
+          "required": false,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpIntegration",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 55,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpTool"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "closeAsync",
+          "kind": "method",
+          "type": "() => Promise<void>",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "id",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "tools",
+          "kind": "property",
+          "type": "readonly McpTool[]",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpIntegrationModule",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 61,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpIntegration"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "createIntegrationAsync",
+          "kind": "method",
+          "type": "() => Promise<McpIntegration>",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "integration",
+          "kind": "property",
+          "type": "McpIntegration",
+          "required": false,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpJsonSchema",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 3,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [],
+      "signatures": [],
+      "members": [
+        {
+          "name": "additionalProperties",
+          "kind": "property",
+          "type": "boolean",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "properties",
+          "kind": "property",
+          "type": "Readonly<Record<string, McpJsonSchema>>",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "required",
+          "kind": "property",
+          "type": "readonly string[]",
+          "required": false,
+          "description": null
+        },
+        {
+          "name": "type",
+          "kind": "property",
+          "type": "\"string\" | \"number\" | \"boolean\" | \"object\" | \"integer\"",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpRegistry",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/features/registry/application/createMcpRegistry.ts",
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 13,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpToolExecutionContext",
+        "RegisteredMcpTool"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "closeAsync",
+          "kind": "method",
+          "type": "() => Promise<void>",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "executeAsync",
+          "kind": "method",
+          "type": "(toolId: string, input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "listTools",
+          "kind": "method",
+          "type": "() => readonly RegisteredMcpTool[]",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "McpRisk",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "unknown",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 1,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [],
+      "signatures": [],
+      "members": [],
+      "structuredRows": []
+    },
+    {
+      "name": "McpTool",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "unknown",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 53,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [],
+      "signatures": [],
+      "members": [],
+      "structuredRows": []
+    },
+    {
+      "name": "McpToolExecutionContext",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/types/public.ts",
+      "sourceLocation": {
+        "filePath": "src/types/public.ts",
+        "line": 10,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [],
+      "signatures": [],
+      "members": [
+        {
+          "name": "actorId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "allowedAccounts",
+          "kind": "property",
+          "type": "readonly string[]",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "approvalToken",
+          "kind": "property",
+          "type": "string",
+          "required": false,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    },
+    {
+      "name": "RegisteredMcpTool",
+      "title": null,
+      "description": null,
+      "isReadme": false,
+      "see": [],
+      "security": [],
+      "kind": "type",
+      "modulePath": "src/features/registry/application/createMcpRegistry.ts",
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 23,
+        "column": 1
+      },
+      "exportPaths": [
+        "src/index.ts"
+      ],
+      "relatedSymbols": [
+        "McpTool"
+      ],
+      "signatures": [],
+      "members": [
+        {
+          "name": "integrationId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "tool",
+          "kind": "property",
+          "type": "McpTool",
+          "required": true,
+          "description": null
+        },
+        {
+          "name": "toolId",
+          "kind": "property",
+          "type": "string",
+          "required": true,
+          "description": null
+        }
+      ],
+      "structuredRows": []
+    }
+  ],
+  "components": [],
+  "sourceFunctions": [
+    {
+      "name": "add",
+      "description": "Add one installed provider package to the explicit workspace MCP configuration.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/commands/add.ts",
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "name": "readPackagesAsync",
+      "description": "Read only the small explicit provider configuration shape.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/commands/add.ts",
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "name": "isPackageName",
+      "description": "Permit package identifiers only, never path-like provider targets.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/commands/add.ts",
+        "line": 44,
+        "column": 1
+      }
+    },
+    {
+      "name": "doctor",
+      "description": "Validate configured package discovery and print diagnostics only to stderr.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/commands/doctor.ts",
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "name": "list",
+      "description": "List explicitly configured provider packages without importing them.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/commands/list.ts",
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "name": "serve",
+      "description": "Serve configured provider tools over STDIO with explicit account scope only.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/cli/commands/serve.ts",
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "name": "createConsumerAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+        "line": 38,
+        "column": 1
+      }
+    },
+    {
+      "name": "discoverMcpIntegrationsAsync",
+      "description": "Discover configured package exports without resolving arbitrary filesystem paths.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "name": "loadIntegrationAsync",
+      "description": "Import a package's public mcp export and enforce the integration contract.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "name": "closeIntegrationsAsync",
+      "description": "Close providers initialized before a later configured provider fails discovery.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 62,
+        "column": 1
+      }
+    },
+    {
+      "name": "isIntegration",
+      "description": "Check the minimal executable provider contract before it reaches the registry.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 73,
+        "column": 1
+      }
+    },
+    {
+      "name": "isPackageName",
+      "description": "Accept package names only; paths and URL-like values are never provider configuration.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "line": 83,
+        "column": 1
+      }
+    },
+    {
+      "name": "expectFailureAsync",
+      "description": null,
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.test.ts",
+        "line": 142,
+        "column": 1
+      }
+    },
+    {
+      "name": "createMcpRegistry",
+      "description": "Create a deterministic registry that enforces account and mutation boundaries.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 37,
+        "column": 1
+      }
+    },
+    {
+      "name": "getAuthorizedAccountId",
+      "description": "Reject missing account identity unless a tool explicitly declares global scope.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 87,
+        "column": 1
+      }
+    },
+    {
+      "name": "registerTools",
+      "description": "Register valid, stable namespaced tool identifiers.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 103,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertWriteApprovalAsync",
+      "description": "Require and consume an immutable, external approval before a productive mutation.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 124,
+        "column": 1
+      }
+    },
+    {
+      "name": "denyAsync",
+      "description": "Record a denial before returning a deterministic boundary error.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 164,
+        "column": 1
+      }
+    },
+    {
+      "name": "recordAsync",
+      "description": "Record audit events without allowing observability failure to bypass enforcement.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 183,
+        "column": 1
+      }
+    },
+    {
+      "name": "fingerprint",
+      "description": "Produce a canonical proposal fingerprint independent of property insertion order.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 191,
+        "column": 1
+      }
+    },
+    {
+      "name": "sortJson",
+      "description": "Sort JSON object keys recursively before binding parameters to an approval.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 198,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertSchema",
+      "description": "Validate the small serializable schema vocabulary accepted at provider boundaries.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 210,
+        "column": 1
+      }
+    },
+    {
+      "name": "assertSchemaValue",
+      "description": "Recursively validate serializable provider values against the declared schema.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 220,
+        "column": 1
+      }
+    },
+    {
+      "name": "matchesType",
+      "description": "Match primitive JSON values against their declared schema type.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 240,
+        "column": 1
+      }
+    },
+    {
+      "name": "isIdentifier",
+      "description": "Restrict public integration and tool identifiers to portable MCP names.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/registry/application/createMcpRegistry.ts",
+        "line": 251,
+        "column": 1
+      }
+    },
+    {
+      "name": "createMcpStdioServerAsync",
+      "description": "Connect registered provider tools to the official MCP STDIO transport.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "name": "createMcpStdioServerAsync",
+      "description": "Compose the central registry with the STDIO delivery adapter.",
+      "see": [],
+      "security": [],
+      "sourceLocation": {
+        "filePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "line": 19,
+        "column": 1
+      }
+    }
+  ],
+  "sequenceScenarios": [
+    {
+      "kind": "export",
+      "name": "createMcpRegistry",
+      "sourcePath": "src/features/registry/application/createMcpRegistry.ts",
+      "symbolName": "createMcpRegistry",
+      "description": "Create a deterministic registry that enforces account and mutation boundaries.",
+      "isReadme": false
+    },
+    {
+      "kind": "export",
+      "name": "createMcpStdioServerAsync",
+      "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+      "symbolName": "createMcpStdioServerAsync",
+      "description": "Compose the central registry with the STDIO delivery adapter.",
+      "isReadme": false
+    },
+    {
+      "kind": "export",
+      "name": "discoverMcpIntegrationsAsync",
+      "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+      "symbolName": "discoverMcpIntegrationsAsync",
+      "description": "Discover configured package exports without resolving arbitrary filesystem paths.",
+      "isReadme": false
+    }
+  ],
+  "graphs": {
+    "imports": [
+      {
+        "fromPath": "src/index.ts",
+        "toPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "sourcePath": "src/index.ts"
+      },
+      {
+        "fromPath": "src/index.ts",
+        "toPath": "src/features/registry/application/createMcpRegistry.ts",
+        "sourcePath": "src/index.ts"
+      },
+      {
+        "fromPath": "src/index.ts",
+        "toPath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "sourcePath": "src/index.ts"
+      },
+      {
+        "fromPath": "src/index.ts",
+        "toPath": "src/types/public.ts",
+        "sourcePath": "src/index.ts"
+      },
+      {
+        "fromPath": "src/cli/index.ts",
+        "toPath": "src/cli/commands/add.ts",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
+        "fromPath": "src/cli/index.ts",
+        "toPath": "src/cli/commands/doctor.ts",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
+        "fromPath": "src/cli/index.ts",
+        "toPath": "src/cli/commands/list.ts",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
+        "fromPath": "src/cli/index.ts",
+        "toPath": "src/cli/commands/serve.ts",
+        "sourcePath": "src/cli/index.ts"
+      },
+      {
+        "fromPath": "src/cli/commands/doctor.ts",
+        "toPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "sourcePath": "src/cli/commands/doctor.ts"
+      },
+      {
+        "fromPath": "src/cli/commands/serve.ts",
+        "toPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromPath": "src/cli/commands/serve.ts",
+        "toPath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+        "toPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromPath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts",
+        "toPath": "src/types/public.ts",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromPath": "src/features/registry/application/createMcpRegistry.test.ts",
+        "toPath": "src/features/registry/application/createMcpRegistry.ts",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromPath": "src/features/registry/application/createMcpRegistry.ts",
+        "toPath": "src/types/public.ts",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromPath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "toPath": "src/types/public.ts",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromPath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "toPath": "src/features/registry/application/createMcpRegistry.ts",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromPath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
+        "toPath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromPath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "toPath": "src/types/public.ts",
+        "sourcePath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromPath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "toPath": "src/features/registry/application/createMcpRegistry.ts",
+        "sourcePath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"
+      }
+    ],
+    "calls": [
+      {
+        "fromSymbol": "add",
+        "toSymbol": "isPackageName",
+        "callExpression": "isPackageName",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "add",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "add",
+        "toSymbol": "readPackagesAsync",
+        "callExpression": "readPackagesAsync",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "add",
+        "toSymbol": "mkdir",
+        "callExpression": "mkdir",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "add",
+        "toSymbol": "dirname",
+        "callExpression": "dirname",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "add",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "add",
+        "toSymbol": "rename",
+        "callExpression": "rename",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "readPackagesAsync",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "src/cli/commands/add.ts",
+        "toSymbol": "isPackageName",
+        "callExpression": "isPackageName",
+        "sourcePath": "src/cli/commands/add.ts"
+      },
+      {
+        "fromSymbol": "doctor",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/cli/commands/doctor.ts"
+      },
+      {
+        "fromSymbol": "doctor",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/cli/commands/doctor.ts"
+      },
+      {
+        "fromSymbol": "doctor",
+        "toSymbol": "discoverMcpIntegrationsAsync",
+        "callExpression": "discoverMcpIntegrationsAsync",
+        "sourcePath": "src/cli/commands/doctor.ts"
+      },
+      {
+        "fromSymbol": "doctor",
+        "toSymbol": "closeAsync",
+        "callExpression": "integration.closeAsync",
+        "sourcePath": "src/cli/commands/doctor.ts"
+      },
+      {
+        "fromSymbol": "list",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/cli/commands/list.ts"
+      },
+      {
+        "fromSymbol": "list",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/cli/commands/list.ts"
+      },
+      {
+        "fromSymbol": "serve",
+        "toSymbol": "readFile",
+        "callExpression": "readFile",
+        "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromSymbol": "serve",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromSymbol": "serve",
+        "toSymbol": "discoverMcpIntegrationsAsync",
+        "callExpression": "discoverMcpIntegrationsAsync",
+        "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromSymbol": "serve",
+        "toSymbol": "createMcpStdioServerAsync",
+        "callExpression": "createMcpStdioServerAsync",
+        "sourcePath": "src/cli/commands/serve.ts"
+      },
+      {
+        "fromSymbol": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+        "toSymbol": "test",
+        "callExpression": "test",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+        "toSymbol": "createConsumerAsync",
+        "callExpression": "createConsumerAsync",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+        "toSymbol": "expect",
+        "callExpression": "expect",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts",
+        "toSymbol": "discoverMcpIntegrationsAsync",
+        "callExpression": "discoverMcpIntegrationsAsync",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "createConsumerAsync",
+        "toSymbol": "mkdtemp",
+        "callExpression": "mkdtemp",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "createConsumerAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "createConsumerAsync",
+        "toSymbol": "tmpdir",
+        "callExpression": "tmpdir",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "createConsumerAsync",
+        "toSymbol": "writeFile",
+        "callExpression": "writeFile",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "createConsumerAsync",
+        "toSymbol": "mkdir",
+        "callExpression": "mkdir",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"
+      },
+      {
+        "fromSymbol": "discoverMcpIntegrationsAsync",
+        "toSymbol": "loadIntegrationAsync",
+        "callExpression": "loadIntegrationAsync",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "discoverMcpIntegrationsAsync",
+        "toSymbol": "closeIntegrationsAsync",
+        "callExpression": "closeIntegrationsAsync",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "loadIntegrationAsync",
+        "toSymbol": "isPackageName",
+        "callExpression": "isPackageName",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "loadIntegrationAsync",
+        "toSymbol": "pathToFileURL",
+        "callExpression": "pathToFileURL",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "loadIntegrationAsync",
+        "toSymbol": "join",
+        "callExpression": "join",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "loadIntegrationAsync",
+        "toSymbol": "createIntegrationAsync",
+        "callExpression": "module.createIntegrationAsync",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "loadIntegrationAsync",
+        "toSymbol": "isIntegration",
+        "callExpression": "isIntegration",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "closeIntegrationsAsync",
+        "toSymbol": "closeAsync",
+        "callExpression": "integration.closeAsync",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.test.ts",
+        "toSymbol": "test",
+        "callExpression": "test",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.test.ts",
+        "toSymbol": "createMcpRegistry",
+        "callExpression": "createMcpRegistry",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.test.ts",
+        "toSymbol": "expect",
+        "callExpression": "expect",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.test.ts",
+        "toSymbol": "executeAsync",
+        "callExpression": "registry.executeAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.test.ts",
+        "toSymbol": "expectFailureAsync",
+        "callExpression": "expectFailureAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromSymbol": "expectFailureAsync",
+        "toSymbol": "expect",
+        "callExpression": "expect",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.test.ts"
+      },
+      {
+        "fromSymbol": "createMcpRegistry",
+        "toSymbol": "registerTools",
+        "callExpression": "registerTools",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "closeAsync",
+        "toSymbol": "closeAsync",
+        "callExpression": "integration.closeAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAsync",
+        "toSymbol": "denyAsync",
+        "callExpression": "denyAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAsync",
+        "toSymbol": "assertSchema",
+        "callExpression": "assertSchema",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAsync",
+        "toSymbol": "getAuthorizedAccountId",
+        "callExpression": "getAuthorizedAccountId",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAsync",
+        "toSymbol": "assertWriteApprovalAsync",
+        "callExpression": "assertWriteApprovalAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAsync",
+        "toSymbol": "executeAsync",
+        "callExpression": "registeredTool.tool.executeAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "executeAsync",
+        "toSymbol": "recordAsync",
+        "callExpression": "recordAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "getAuthorizedAccountId",
+        "toSymbol": "accountId",
+        "callExpression": "registeredTool.tool.accountId",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "getAuthorizedAccountId",
+        "toSymbol": "denyAsync",
+        "callExpression": "denyAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.ts",
+        "toSymbol": "isIdentifier",
+        "callExpression": "isIdentifier",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertWriteApprovalAsync",
+        "toSymbol": "describeChangeAsync",
+        "callExpression": "registeredTool.tool.describeChangeAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertWriteApprovalAsync",
+        "toSymbol": "verifyExpectedStateAsync",
+        "callExpression": "registeredTool.tool.verifyExpectedStateAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertWriteApprovalAsync",
+        "toSymbol": "now",
+        "callExpression": "now",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertWriteApprovalAsync",
+        "toSymbol": "fingerprint",
+        "callExpression": "fingerprint",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertWriteApprovalAsync",
+        "toSymbol": "verifyAndConsumeAsync",
+        "callExpression": "verifier.verifyAndConsumeAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "denyAsync",
+        "toSymbol": "recordAsync",
+        "callExpression": "recordAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "recordAsync",
+        "toSymbol": "recordAsync",
+        "callExpression": "auditSink?.recordAsync",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "fingerprint",
+        "toSymbol": "createHash",
+        "callExpression": "createHash",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "fingerprint",
+        "toSymbol": "sortJson",
+        "callExpression": "sortJson",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "src/features/registry/application/createMcpRegistry.ts",
+        "toSymbol": "sortJson",
+        "callExpression": "sortJson",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertSchema",
+        "toSymbol": "assertSchemaValue",
+        "callExpression": "assertSchemaValue",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertSchemaValue",
+        "toSymbol": "matchesType",
+        "callExpression": "matchesType",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "assertSchemaValue",
+        "toSymbol": "assertSchemaValue",
+        "callExpression": "assertSchemaValue",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "createMcpStdioServerAsync",
+        "toSymbol": "createMcpStdioServerAdapterAsync",
+        "callExpression": "createMcpStdioServerAdapterAsync",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "createMcpStdioServerAsync",
+        "toSymbol": "createMcpRegistry",
+        "callExpression": "createMcpRegistry",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "toSymbol": "listTools",
+        "callExpression": "options.registry.listTools",
+        "sourcePath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts",
+        "toSymbol": "executeAsync",
+        "callExpression": "options.registry.executeAsync",
+        "sourcePath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "closeAsync",
+        "toSymbol": "closeAsync",
+        "callExpression": "options.registry.closeAsync",
+        "sourcePath": "src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"
+      }
+    ],
+    "typeReferences": [
+      {
+        "fromSymbol": "discoverMcpIntegrationsAsync",
+        "toType": "DiscoverMcpIntegrationsOptions",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "discoverMcpIntegrationsAsync",
+        "toType": "McpIntegration",
+        "sourcePath": "src/features/discovery/application/discoverMcpIntegrationsAsync.ts"
+      },
+      {
+        "fromSymbol": "McpRegistry",
+        "toType": "McpToolExecutionContext",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "McpRegistry",
+        "toType": "Readonly",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "McpRegistry",
+        "toType": "RegisteredMcpTool",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "RegisteredMcpTool",
+        "toType": "McpTool",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "createMcpRegistry",
+        "toType": "CreateMcpRegistryOptions",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "createMcpRegistry",
+        "toType": "McpRegistry",
+        "sourcePath": "src/features/registry/application/createMcpRegistry.ts"
+      },
+      {
+        "fromSymbol": "CreateMcpStdioServerOptions",
+        "toType": "McpApprovalVerifier",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "CreateMcpStdioServerOptions",
+        "toType": "McpAuditSink",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "CreateMcpStdioServerOptions",
+        "toType": "McpIntegration",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "CreateMcpStdioServerOptions",
+        "toType": "McpToolExecutionContext",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "createMcpStdioServerAsync",
+        "toType": "CreateMcpStdioServerOptions",
+        "sourcePath": "src/features/transport/composition/createMcpStdioServerAsync.ts"
+      },
+      {
+        "fromSymbol": "McpJsonSchema",
+        "toType": "Readonly",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpChangeDescriptor",
+        "toType": "Readonly",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAccountScopedTool",
+        "toType": "McpChangeDescriptor",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAccountScopedTool",
+        "toType": "McpJsonSchema",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAccountScopedTool",
+        "toType": "McpRisk",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAccountScopedTool",
+        "toType": "McpToolExecutionContext",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAccountScopedTool",
+        "toType": "Readonly",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpGlobalTool",
+        "toType": "McpChangeDescriptor",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpGlobalTool",
+        "toType": "McpJsonSchema",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpGlobalTool",
+        "toType": "McpRisk",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpGlobalTool",
+        "toType": "McpToolExecutionContext",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpGlobalTool",
+        "toType": "Readonly",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpIntegration",
+        "toType": "McpTool",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpIntegrationModule",
+        "toType": "McpIntegration",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpApprovalProposal",
+        "toType": "McpChangeDescriptor",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpApprovalVerifier",
+        "toType": "McpApprovalProposal",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAuditEvent",
+        "toType": "McpRisk",
+        "sourcePath": "src/types/public.ts"
+      },
+      {
+        "fromSymbol": "McpAuditSink",
+        "toType": "McpAuditEvent",
+        "sourcePath": "src/types/public.ts"
+      }
+    ],
+    "componentComposition": []
+  }
+}

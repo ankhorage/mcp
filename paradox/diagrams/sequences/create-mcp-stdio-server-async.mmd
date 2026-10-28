@@ -1,0 +1,11 @@
+sequenceDiagram
+  participant participant_createMcpRegistry as createMcpRegistry
+  participant participant_createMcpStdioServerAdapterAsync as createMcpStdioServerAdapterAsync
+  participant participant_createMcpStdioServerAsync as createMcpStdioServerAsync
+  participant participant_registerTools as registerTools
+  participant_createMcpStdioServerAsync->>participant_createMcpStdioServerAdapterAsync: createMcpStdioServerAdapterAsync()
+  participant_createMcpStdioServerAdapterAsync-->>participant_createMcpStdioServerAsync: return
+  participant_createMcpStdioServerAsync->>participant_createMcpRegistry: createMcpRegistry()
+  participant_createMcpRegistry->>participant_registerTools: registerTools()
+  participant_registerTools-->>participant_createMcpRegistry: return
+  participant_createMcpRegistry-->>participant_createMcpStdioServerAsync: return

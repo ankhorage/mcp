@@ -4,8 +4,7 @@ import { join } from 'node:path';
 import type { AnkhCommandExecutionRequest } from '@ankhorage/ankh';
 
 import { discoverMcpIntegrationsAsync } from '../../features/discovery/application/discoverMcpIntegrationsAsync.js';
-import { createMcpRegistry } from '../../features/registry/application/createMcpRegistry.js';
-import { createMcpStdioServerAsync } from '../../features/transport/adapters/inbound/createMcpStdioServerAsync.js';
+import { createMcpStdioServerAsync } from '../../features/transport/composition/createMcpStdioServerAsync.js';
 
 /*** Serve configured provider tools over STDIO with explicit account scope only. */
 export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exitCode: number }> {
@@ -22,7 +21,7 @@ export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exi
     });
     await createMcpStdioServerAsync({
       context: { actorId: 'stdio', allowedAccounts: [] },
-      registry: createMcpRegistry({ integrations }),
+      integrations,
       version: request.context.version,
     });
     return { exitCode: 0 };
