@@ -1,5 +1,8 @@
 sequenceDiagram
   participant participant_createMcpRegistry as createMcpRegistry
   participant participant_registerTools as registerTools
+  participant participant_registerTransactionalApprovalConsumers as registerTransactionalApprovalConsumers
   participant_createMcpRegistry->>participant_registerTools: registerTools()
   participant_registerTools-->>participant_createMcpRegistry: return
+  participant_createMcpRegistry->>participant_registerTransactionalApprovalConsumers: registerTransactionalApprovalConsumers()
+  participant_registerTransactionalApprovalConsumers-->>participant_createMcpRegistry: return

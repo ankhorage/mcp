@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 4cd2e44: Load optional privileged STDIO host composition from trusted process configuration and keep approval credentials outside MCP request data.
+
 ## 0.2.0
 
 ### Minor Changes

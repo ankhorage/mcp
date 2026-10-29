@@ -4,7 +4,7 @@
 
 Kind: `function`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:33:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:41:1`
 
 Create a deterministic registry that enforces account and mutation boundaries.
 
@@ -18,7 +18,7 @@ Create a deterministic registry that enforces account and mutation boundaries.
 
 Kind: `function`
 Module: `src/features/transport/composition/createMcpStdioServerAsync.ts`
-Source: `src/features/transport/composition/createMcpStdioServerAsync.ts:19:1`
+Source: `src/features/transport/composition/createMcpStdioServerAsync.ts:21:1`
 
 Compose the central registry with the STDIO delivery adapter.
 
@@ -32,7 +32,7 @@ Compose the central registry with the STDIO delivery adapter.
 
 Kind: `type`
 Module: `src/features/transport/composition/createMcpStdioServerAsync.ts`
-Source: `src/features/transport/composition/createMcpStdioServerAsync.ts:10:1`
+Source: `src/features/transport/composition/createMcpStdioServerAsync.ts:11:1`
 
 ### Members
 
@@ -40,8 +40,9 @@ Source: `src/features/transport/composition/createMcpStdioServerAsync.ts:10:1`
 | --- | --- | --- | --- | --- |
 | approvalVerifier | property | `McpApprovalVerifier` | no |  |
 | auditSink | property | `McpAuditSink` | no |  |
-| context | property | `McpToolExecutionContext` | yes |  |
+| context | property | `McpInvocationContext` | yes |  |
 | integrations | property | `readonly McpIntegration[]` | yes |  |
+| transactionalApprovalConsumers | property | `readonly McpTransactionalApprovalConsumer[]` | no |  |
 | version | property | `string` | yes |  |
 
 ## discoverMcpIntegrationsAsync
@@ -71,17 +72,33 @@ Source: `src/features/discovery/application/discoverMcpIntegrationsAsync.ts:8:1`
 | cwd | property | `string` | yes |  |
 | packageNames | property | `readonly string[]` | yes |  |
 
+## loadMcpHostAsync
+
+Kind: `function`
+Module: `src/features/host/application/loadMcpHostAsync.ts`
+Source: `src/features/host/application/loadMcpHostAsync.ts:11:1`
+
+Load optional privileged composition from a process-owned absolute module path.
+
+### Signatures
+
+- `(input: { readonly env: Readonly<Record<string, string | undefined>>; }) => Promise<McpHost | undefined>`
+  - input: `{ readonly env: Readonly<Record<string, string | undefined>>; }`
+  - returns: `Promise<McpHost | undefined>`
+
 ## McpAccountScopedTool
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:44:1`
+Source: `src/types/public.ts:61:1`
 
 ### Members
 
 | Name | Kind | Type | Required | Description |
 | --- | --- | --- | --- | --- |
 | accountId | method | `(input: Readonly<Record<string, unknown>>) => string \| null` | yes |  |
+| approvalFingerprintAsync | method | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<string>` | no |  |
+| auditOutcome | method | `(output: unknown) => McpExecutionAuditOutcome` | no |  |
 | describeChangeAsync | method | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<McpChangeDescriptor>` | no |  |
 | description | property | `string` | yes |  |
 | executeAsync | property | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>` | yes |  |
@@ -97,7 +114,7 @@ Source: `src/types/public.ts:44:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:66:1`
+Source: `src/types/public.ts:83:1`
 
 ### Members
 
@@ -115,19 +132,19 @@ Source: `src/types/public.ts:66:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:76:1`
+Source: `src/types/public.ts:93:1`
 
 ### Members
 
 | Name | Kind | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| verifyAndConsumeAsync | method | `(proposal: McpApprovalProposal, token: string) => Promise<boolean>` | yes |  |
+| verifyAndConsumeAsync | method | `(proposal: McpApprovalProposal) => Promise<boolean>` | yes |  |
 
 ## McpAuditEvent
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:80:1`
+Source: `src/types/public.ts:105:1`
 
 ### Members
 
@@ -136,7 +153,7 @@ Source: `src/types/public.ts:80:1`
 | accountId | property | `string \| null` | yes |  |
 | actorId | property | `string` | yes |  |
 | errorCode | property | `string` | no |  |
-| outcome | property | `"denied" \| "executed" \| "failed" \| "intent"` | yes |  |
+| outcome | property | `"executed" \| "indeterminate" \| "denied" \| "failed" \| "intent"` | yes |  |
 | risk | property | `McpRisk` | yes |  |
 | toolId | property | `string` | yes |  |
 
@@ -144,7 +161,7 @@ Source: `src/types/public.ts:80:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:89:1`
+Source: `src/types/public.ts:114:1`
 
 ### Members
 
@@ -156,7 +173,7 @@ Source: `src/types/public.ts:89:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:16:1`
+Source: `src/types/public.ts:27:1`
 
 ### Members
 
@@ -166,16 +183,36 @@ Source: `src/types/public.ts:16:1`
 | before | property | `Readonly<Record<string, unknown>> \| null` | yes |  |
 | resourceId | property | `string` | yes |  |
 
-## McpGlobalTool
+## McpConsumedApproval
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:49:1`
+Source: `src/types/public.ts:16:1`
 
 ### Members
 
 | Name | Kind | Type | Required | Description |
 | --- | --- | --- | --- | --- |
+| approvalId | property | `string` | yes |  |
+
+## McpExecutionAuditOutcome
+
+Kind: `unknown`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:25:1`
+
+## McpGlobalTool
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:66:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| approvalFingerprintAsync | method | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<string>` | no |  |
+| auditOutcome | method | `(output: unknown) => McpExecutionAuditOutcome` | no |  |
 | describeChangeAsync | method | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<McpChangeDescriptor>` | no |  |
 | description | property | `string` | yes |  |
 | executeAsync | property | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>` | yes |  |
@@ -187,11 +224,38 @@ Source: `src/types/public.ts:49:1`
 | title | property | `string` | yes |  |
 | verifyExpectedStateAsync | method | `(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<boolean>` | no |  |
 
+## McpHost
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:119:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| approvalVerifier | property | `McpApprovalVerifier` | no |  |
+| auditSink | property | `McpAuditSink` | no |  |
+| context | property | `McpInvocationContext` | yes |  |
+| transactionalApprovalConsumers | property | `readonly McpTransactionalApprovalConsumer[]` | no |  |
+
+## McpHostModule
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:126:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| createMcpHostAsync | method | `() => Promise<McpHost>` | yes |  |
+
 ## McpIntegration
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:55:1`
+Source: `src/types/public.ts:72:1`
 
 ### Members
 
@@ -205,7 +269,7 @@ Source: `src/types/public.ts:55:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:61:1`
+Source: `src/types/public.ts:78:1`
 
 ### Members
 
@@ -213,6 +277,19 @@ Source: `src/types/public.ts:61:1`
 | --- | --- | --- | --- | --- |
 | createIntegrationAsync | method | `() => Promise<McpIntegration>` | no |  |
 | integration | property | `McpIntegration` | no |  |
+
+## McpInvocationContext
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:10:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| actorId | property | `string` | yes |  |
+| allowedAccounts | property | `readonly string[]` | yes |  |
 
 ## McpJsonSchema
 
@@ -233,14 +310,14 @@ Source: `src/types/public.ts:3:1`
 
 Kind: `type`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:13:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:20:1`
 
 ### Members
 
 | Name | Kind | Type | Required | Description |
 | --- | --- | --- | --- | --- |
 | closeAsync | method | `() => Promise<void>` | yes |  |
-| executeAsync | method | `(toolId: string, input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>` | yes |  |
+| executeAsync | method | `(toolId: string, input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<unknown>` | yes |  |
 | listTools | method | `() => readonly RegisteredMcpTool[]` | yes |  |
 
 ## McpRisk
@@ -253,13 +330,13 @@ Source: `src/types/public.ts:1:1`
 
 Kind: `unknown`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:53:1`
+Source: `src/types/public.ts:70:1`
 
 ## McpToolExecutionContext
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:10:1`
+Source: `src/types/public.ts:21:1`
 
 ### Members
 
@@ -267,10 +344,23 @@ Source: `src/types/public.ts:10:1`
 | --- | --- | --- | --- | --- |
 | actorId | property | `string` | yes |  |
 | allowedAccounts | property | `readonly string[]` | yes |  |
-| approvalToken | property | `string` | no |  |
+| consumedApproval | property | `McpConsumedApproval` | no |  |
+
+## McpTransactionalApprovalConsumer
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:98:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| consumeApprovalAndCreateIntentAsync | method | `(proposal: McpApprovalProposal) => Promise<McpConsumedApproval \| null>` | yes |  |
+| toolIds | property | `readonly string[]` | yes |  |
 
 ## RegisteredMcpTool
 
 Kind: `unknown`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:23:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:30:1`
