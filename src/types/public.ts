@@ -10,7 +10,6 @@ export interface McpJsonSchema {
 export interface McpToolExecutionContext {
   readonly actorId: string;
   readonly allowedAccounts: readonly string[];
-  readonly approvalToken?: string;
 }
 
 export interface McpChangeDescriptor {
@@ -74,7 +73,7 @@ export interface McpApprovalProposal {
 }
 
 export interface McpApprovalVerifier {
-  verifyAndConsumeAsync(proposal: McpApprovalProposal, token: string): Promise<boolean>;
+  verifyAndConsumeAsync(proposal: McpApprovalProposal): Promise<boolean>;
 }
 
 export interface McpAuditEvent {
@@ -88,4 +87,15 @@ export interface McpAuditEvent {
 
 export interface McpAuditSink {
   recordAsync(event: McpAuditEvent): Promise<void>;
+}
+
+/** Trusted process-local composition supplied by an MCP host, never by an MCP request. */
+export interface McpHost {
+  readonly approvalVerifier?: McpApprovalVerifier;
+  readonly auditSink?: McpAuditSink;
+  readonly context: McpToolExecutionContext;
+}
+
+export interface McpHostModule {
+  createMcpHostAsync(): Promise<McpHost>;
 }

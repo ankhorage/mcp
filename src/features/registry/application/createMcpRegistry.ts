@@ -194,7 +194,6 @@ async function assertWriteApprovalAsync(
   if (registeredTool.tool.risk === 'read') return;
   if (
     verifier === undefined ||
-    context.approvalToken === undefined ||
     accountId === null ||
     registeredTool.tool.describeChangeAsync === undefined ||
     registeredTool.tool.verifyExpectedStateAsync === undefined
@@ -216,7 +215,7 @@ async function assertWriteApprovalAsync(
     operation: registeredTool.tool.id,
     toolId: registeredTool.toolId,
   };
-  if (!(await verifier.verifyAndConsumeAsync(proposal, context.approvalToken)))
+  if (!(await verifier.verifyAndConsumeAsync(proposal)))
     throw new McpRequestError(
       'The supplied approval is denied, expired, replayed, or bound to another operation.',
     );

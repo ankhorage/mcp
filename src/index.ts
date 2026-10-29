@@ -1,5 +1,6 @@
 export type { DiscoverMcpIntegrationsOptions } from './features/discovery/application/discoverMcpIntegrationsAsync.js';
 export { discoverMcpIntegrationsAsync } from './features/discovery/application/discoverMcpIntegrationsAsync.js';
+export { loadMcpHostAsync } from './features/host/application/loadMcpHostAsync.js';
 export type {
   McpRegistry,
   RegisteredMcpTool,
