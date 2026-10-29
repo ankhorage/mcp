@@ -2,6 +2,7 @@ import type { AnkhCommandExecutionRequest } from '@ankhorage/ankh';
 
 import { readMcpConfigurationAsync } from '../../features/config/application/readMcpConfigurationAsync.js';
 import { discoverMcpIntegrationsAsync } from '../../features/discovery/application/discoverMcpIntegrationsAsync.js';
+import { loadMcpHostAsync } from '../../features/host/application/loadMcpHostAsync.js';
 import { createMcpStdioServerAsync } from '../../features/transport/composition/createMcpStdioServerAsync.js';
 
 /*** Serve configured provider tools over STDIO with explicit account scope only. */
@@ -12,8 +13,17 @@ export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exi
       cwd: request.context.cwd,
       packageNames: configuration.packages ?? [],
     });
+    const host = await loadMcpHostAsync({ env: request.context.env });
     await createMcpStdioServerAsync({
-      context: { actorId: 'stdio', allowedAccounts: configuration.allowedAccounts ?? [] },
+      ...(host?.approvalVerifier === undefined ? {} : { approvalVerifier: host.approvalVerifier }),
+      ...(host?.auditSink === undefined ? {} : { auditSink: host.auditSink }),
+      ...(host?.transactionalApprovalConsumers === undefined
+        ? {}
+        : { transactionalApprovalConsumers: host.transactionalApprovalConsumers }),
+      context: host?.context ?? {
+        actorId: 'stdio',
+        allowedAccounts: configuration.allowedAccounts ?? [],
+      },
       integrations,
       version: request.context.version,
     });

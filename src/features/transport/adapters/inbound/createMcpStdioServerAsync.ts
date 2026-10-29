@@ -2,11 +2,11 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import type { McpToolExecutionContext } from '../../../../types/public.js';
+import type { McpInvocationContext } from '../../../../types/public.js';
 import type { McpRegistry } from '../../../registry/application/createMcpRegistry.js';
 
 export interface CreateMcpStdioServerOptions {
-  readonly context: McpToolExecutionContext;
+  readonly context: McpInvocationContext;
   readonly registry: McpRegistry;
   readonly version: string;
 }

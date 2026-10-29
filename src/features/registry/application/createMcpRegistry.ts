@@ -1,21 +1,28 @@
-import { createHash } from 'node:crypto';
-
 import type {
-  McpApprovalProposal,
   McpApprovalVerifier,
   McpAuditSink,
   McpIntegration,
-  McpJsonSchema,
+  McpInvocationContext,
   McpTool,
   McpToolExecutionContext,
+  McpTransactionalApprovalConsumer,
 } from '../../../types/public.js';
+import { assertMcpJsonSchema } from './assertMcpJsonSchema.js';
+import { createMcpApprovalProposalAsync } from './createMcpApprovalProposalAsync.js';
+import { createMcpOutcomeErrorCode } from './createMcpOutcomeErrorCode.js';
+import { denyMcpRequestAsync } from './denyMcpRequestAsync.js';
+import { isMcpToolIdentifier } from './isMcpToolIdentifier.js';
+import { McpRequestError } from './McpRequestError.js';
+import { recordMcpAuditBestEffortAsync } from './recordMcpAuditBestEffortAsync.js';
+import { recordMcpAuditRequiredAsync } from './recordMcpAuditRequiredAsync.js';
+import { registerTransactionalApprovalConsumers } from './registerTransactionalApprovalConsumers.js';
 
 export interface McpRegistry {
   closeAsync(): Promise<void>;
   executeAsync(
     toolId: string,
     input: Readonly<Record<string, unknown>>,
-    context: McpToolExecutionContext,
+    context: McpInvocationContext,
   ): Promise<unknown>;
   listTools(): readonly RegisteredMcpTool[];
 }
@@ -27,12 +34,17 @@ export interface CreateMcpRegistryOptions {
   readonly auditSink?: McpAuditSink;
   readonly integrations: readonly McpIntegration[];
   readonly now?: () => Date;
+  readonly transactionalApprovalConsumers?: readonly McpTransactionalApprovalConsumer[];
 }
 
 /*** Create a deterministic registry that enforces account and mutation boundaries. */
 export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistry {
   const registeredTools = registerTools(options.integrations);
   const toolsById = new Map(registeredTools.map((tool) => [tool.toolId, tool]));
+  const transactionalConsumersByToolId = registerTransactionalApprovalConsumers(
+    registeredTools,
+    options.transactionalApprovalConsumers ?? [],
+  );
   return {
     closeAsync: async () => {
       for (const integration of options.integrations) await integration.closeAsync?.();
@@ -40,8 +52,21 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
     executeAsync: async (toolId, input, context) => {
       const registeredTool = toolsById.get(toolId);
       if (registeredTool === undefined)
-        return denyAsync(options.auditSink, toolId, context, null, 'unknown-tool');
-      return await executeRegisteredToolAsync(registeredTool, toolId, input, context, options);
+        return denyMcpRequestAsync({
+          accountId: null,
+          auditSink: options.auditSink,
+          context,
+          errorCode: 'unknown-tool',
+          toolId,
+        });
+      return await executeRegisteredToolAsync(
+        registeredTool,
+        toolId,
+        input,
+        context,
+        options,
+        transactionalConsumersByToolId.get(toolId),
+      );
     },
     listTools: () => registeredTools,
   };
@@ -52,37 +77,22 @@ async function executeRegisteredToolAsync(
   registeredTool: RegisteredMcpTool,
   toolId: string,
   input: Readonly<Record<string, unknown>>,
-  context: McpToolExecutionContext,
+  context: McpInvocationContext,
   options: CreateMcpRegistryOptions,
+  transactionalConsumer: McpTransactionalApprovalConsumer | undefined,
 ): Promise<unknown> {
   try {
-    assertSchema(input, registeredTool.tool.inputSchema, 'input');
-    const accountId = await getAuthorizedAccountId(
+    return await executeAuthorizedToolAsync(
       registeredTool,
+      toolId,
       input,
       context,
-      options.auditSink,
+      options,
+      transactionalConsumer,
     );
-    await assertWriteApprovalAsync(
-      registeredTool,
-      input,
-      context,
-      options.approvalVerifier,
-      accountId,
-      options.now ?? (() => new Date()),
-    );
-    if (registeredTool.tool.risk === 'write')
-      await recordRequiredAsync(options.auditSink, {
-        accountId,
-        actorId: context.actorId,
-        outcome: 'intent',
-        risk: 'write',
-        toolId,
-      });
-    return await executeAndAuditAsync(registeredTool, input, context, accountId, options.auditSink);
   } catch (error) {
     if (!(error instanceof McpRequestError))
-      await recordBestEffortAsync(options.auditSink, {
+      await recordMcpAuditBestEffortAsync(options.auditSink, {
         accountId: null,
         actorId: context.actorId,
         errorCode: 'execution-rejected',
@@ -95,11 +105,48 @@ async function executeRegisteredToolAsync(
   }
 }
 
+/** Authorize one registered tool and record its durable write intent before provider execution. */
+async function executeAuthorizedToolAsync(
+  registeredTool: RegisteredMcpTool,
+  toolId: string,
+  input: Readonly<Record<string, unknown>>,
+  context: McpInvocationContext,
+  options: CreateMcpRegistryOptions,
+  transactionalConsumer: McpTransactionalApprovalConsumer | undefined,
+): Promise<unknown> {
+  assertMcpJsonSchema(input, registeredTool.tool.inputSchema, 'input');
+  const accountId = await getAuthorizedAccountId(registeredTool, input, context, options.auditSink);
+  const executionContext = await assertWriteApprovalAsync(
+    registeredTool,
+    input,
+    context,
+    options.approvalVerifier,
+    accountId,
+    options.now ?? (() => new Date()),
+    transactionalConsumer,
+  );
+  if (registeredTool.tool.risk === 'write')
+    await recordMcpAuditRequiredAsync(options.auditSink, {
+      accountId,
+      actorId: context.actorId,
+      outcome: 'intent',
+      risk: 'write',
+      toolId,
+    });
+  return await executeAndAuditAsync(
+    registeredTool,
+    input,
+    executionContext,
+    accountId,
+    options.auditSink,
+  );
+}
+
 /*** Execute one authorized tool and durably record write outcomes without exposing provider failures. */
 async function executeAndAuditAsync(
   registeredTool: RegisteredMcpTool,
   input: Readonly<Record<string, unknown>>,
-  context: McpToolExecutionContext,
+  context: McpInvocationContext,
   accountId: string | null,
   auditSink: McpAuditSink | undefined,
 ): Promise<unknown> {
@@ -107,10 +154,16 @@ async function executeAndAuditAsync(
   try {
     output = await registeredTool.tool.executeAsync(input, context);
     if (registeredTool.tool.outputSchema !== undefined)
-      assertSchema(output, registeredTool.tool.outputSchema, 'output');
+      assertMcpJsonSchema(output, registeredTool.tool.outputSchema, 'output');
   } catch (error) {
     try {
-      await recordOutcomeAsync(auditSink, registeredTool, context, accountId, 'failed');
+      await recordOutcomeAsync(
+        auditSink,
+        registeredTool,
+        context,
+        accountId,
+        registeredTool.tool.risk === 'write' ? 'indeterminate' : 'failed',
+      );
     } catch {
       throw new McpRequestError('MCP write outcome could not be durably recorded.');
     }
@@ -118,7 +171,13 @@ async function executeAndAuditAsync(
     throw new McpRequestError('MCP tool execution failed.');
   }
   try {
-    await recordOutcomeAsync(auditSink, registeredTool, context, accountId, 'executed');
+    await recordOutcomeAsync(
+      auditSink,
+      registeredTool,
+      context,
+      accountId,
+      registeredTool.tool.auditOutcome?.(output) ?? 'executed',
+    );
   } catch {
     throw new McpRequestError('MCP write outcome could not be durably recorded.');
   }
@@ -131,18 +190,19 @@ async function recordOutcomeAsync(
   registeredTool: RegisteredMcpTool,
   context: McpToolExecutionContext,
   accountId: string | null,
-  outcome: 'executed' | 'failed',
+  outcome: 'executed' | 'failed' | 'indeterminate',
 ): Promise<void> {
   const event = {
     accountId,
     actorId: context.actorId,
-    ...(outcome === 'failed' ? { errorCode: 'execution-rejected' } : {}),
+    ...createMcpOutcomeErrorCode(outcome),
     outcome,
     risk: registeredTool.tool.risk,
     toolId: registeredTool.toolId,
   } as const;
-  if (registeredTool.tool.risk === 'write') return await recordRequiredAsync(auditSink, event);
-  await recordBestEffortAsync(auditSink, event);
+  if (registeredTool.tool.risk === 'write')
+    return await recordMcpAuditRequiredAsync(auditSink, event);
+  await recordMcpAuditBestEffortAsync(auditSink, event);
 }
 
 /*** Reject missing account identity unless a tool explicitly declares global scope. */
@@ -155,9 +215,21 @@ async function getAuthorizedAccountId(
   if (registeredTool.tool.scope === 'global') return null;
   const accountId = registeredTool.tool.accountId(input);
   if (accountId === null)
-    return denyAsync(auditSink, registeredTool.toolId, context, null, 'missing-account-identity');
+    return denyMcpRequestAsync({
+      accountId: null,
+      auditSink,
+      context,
+      errorCode: 'missing-account-identity',
+      toolId: registeredTool.toolId,
+    });
   if (!context.allowedAccounts.includes(accountId))
-    return denyAsync(auditSink, registeredTool.toolId, context, accountId, 'account-not-allowed');
+    return denyMcpRequestAsync({
+      accountId,
+      auditSink,
+      context,
+      errorCode: 'account-not-allowed',
+      toolId: registeredTool.toolId,
+    });
   return accountId;
 }
 
@@ -165,11 +237,11 @@ async function getAuthorizedAccountId(
 function registerTools(integrations: readonly McpIntegration[]): readonly RegisteredMcpTool[] {
   const integrationIds = new Set<string>();
   const tools = integrations.flatMap((integration) => {
-    if (!isIdentifier(integration.id) || integrationIds.has(integration.id))
+    if (!isMcpToolIdentifier(integration.id) || integrationIds.has(integration.id))
       throw new Error(`Invalid or duplicate MCP integration identifier: ${integration.id}`);
     integrationIds.add(integration.id);
     return integration.tools.map((tool) => {
-      if (!isIdentifier(tool.id))
+      if (!isMcpToolIdentifier(tool.id))
         throw new Error(`Invalid MCP tool identifier: ${integration.id}.${tool.id}`);
       return { integrationId: integration.id, tool, toolId: `${integration.id}.${tool.id}` };
     });
@@ -186,15 +258,14 @@ function registerTools(integrations: readonly McpIntegration[]): readonly Regist
 async function assertWriteApprovalAsync(
   registeredTool: RegisteredMcpTool,
   input: Readonly<Record<string, unknown>>,
-  context: McpToolExecutionContext,
+  context: McpInvocationContext,
   verifier: McpApprovalVerifier | undefined,
   accountId: string | null,
   now: () => Date,
-): Promise<void> {
-  if (registeredTool.tool.risk === 'read') return;
+  transactionalConsumer: McpTransactionalApprovalConsumer | undefined,
+): Promise<McpToolExecutionContext> {
+  if (registeredTool.tool.risk === 'read') return context;
   if (
-    verifier === undefined ||
-    context.approvalToken === undefined ||
     accountId === null ||
     registeredTool.tool.describeChangeAsync === undefined ||
     registeredTool.tool.verifyExpectedStateAsync === undefined
@@ -207,131 +278,30 @@ async function assertWriteApprovalAsync(
     throw new McpRequestError(
       'Write approval is stale because provider state no longer matches the proposal.',
     );
-  const proposal: McpApprovalProposal = {
+  const proposal = await createMcpApprovalProposalAsync({
     accountId,
-    actorId: context.actorId,
     change,
-    expiresAt: new Date(now().getTime() + 60_000).toISOString(),
-    fingerprint: fingerprint(input),
-    operation: registeredTool.tool.id,
-    toolId: registeredTool.toolId,
-  };
-  if (!(await verifier.verifyAndConsumeAsync(proposal, context.approvalToken)))
+    context,
+    now,
+    tool: registeredTool,
+    toolInput: input,
+  });
+  if (transactionalConsumer !== undefined) {
+    const consumedApproval =
+      await transactionalConsumer.consumeApprovalAndCreateIntentAsync(proposal);
+    if (consumedApproval === null)
+      throw new McpRequestError(
+        'The supplied approval is denied, expired, replayed, or bound to another operation.',
+      );
+    return { ...context, consumedApproval };
+  }
+  if (verifier === undefined)
+    throw new McpRequestError(
+      'Write tools require an externally issued, durable approval and provider state verification.',
+    );
+  if (!(await verifier.verifyAndConsumeAsync(proposal)))
     throw new McpRequestError(
       'The supplied approval is denied, expired, replayed, or bound to another operation.',
     );
-}
-
-/*** Record a denial before returning a deterministic boundary error. */
-async function denyAsync(
-  auditSink: McpAuditSink | undefined,
-  toolId: string,
-  context: McpToolExecutionContext,
-  accountId: string | null,
-  errorCode: string,
-): Promise<never> {
-  await recordBestEffortAsync(auditSink, {
-    accountId,
-    actorId: context.actorId,
-    errorCode,
-    outcome: 'denied',
-    risk: 'read',
-    toolId,
-  });
-  throw new McpRequestError(`MCP request denied: ${errorCode}`);
-}
-
-/*** Identify boundary failures whose deterministic messages are safe to return to clients. */
-class McpRequestError extends Error {}
-
-/*** Record reads and denials opportunistically without changing their authorization decision. */
-async function recordBestEffortAsync(
-  auditSink: McpAuditSink | undefined,
-  event: Parameters<McpAuditSink['recordAsync']>[0],
-): Promise<void> {
-  try {
-    await auditSink?.recordAsync(event);
-  } catch {
-    // Audit delivery must not alter an authorization decision or expose sink failures to clients.
-  }
-}
-
-/*** Require a durable audit record for each write intent and terminal write outcome. */
-async function recordRequiredAsync(
-  auditSink: McpAuditSink | undefined,
-  event: Parameters<McpAuditSink['recordAsync']>[0],
-): Promise<void> {
-  try {
-    await auditSink?.recordAsync(event);
-    if (auditSink === undefined) throw new Error('audit sink is unavailable');
-  } catch {
-    throw new McpRequestError('MCP write rejected because durable audit recording is unavailable.');
-  }
-}
-
-/*** Produce a canonical proposal fingerprint independent of property insertion order. */
-function fingerprint(value: Readonly<Record<string, unknown>>): string {
-  return createHash('sha256')
-    .update(JSON.stringify(sortJson(value)))
-    .digest('hex');
-}
-
-/*** Sort JSON object keys recursively before binding parameters to an approval. */
-function sortJson(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortJson);
-  if (typeof value === 'object' && value !== null)
-    return Object.fromEntries(
-      Object.entries(value)
-        .toSorted(([left], [right]) => left.localeCompare(right))
-        .map(([key, candidate]) => [key, sortJson(candidate)]),
-    );
-  return value;
-}
-
-/*** Validate the small serializable schema vocabulary accepted at provider boundaries. */
-function assertSchema(
-  value: unknown,
-  schema: McpJsonSchema,
-  label: string,
-): asserts value is Readonly<Record<string, unknown>> {
-  if (schema.type !== 'object')
-    throw new McpRequestError(`MCP ${label} must match an object schema.`);
-  assertSchemaValue(value, schema, label);
-}
-
-/*** Recursively validate serializable provider values against the declared schema. */
-function assertSchemaValue(value: unknown, schema: McpJsonSchema, label: string): void {
-  if (!matchesType(value, schema.type))
-    throw new McpRequestError(`MCP ${label} must be ${schema.type}.`);
-  if (schema.type !== 'object') return;
-  const record = new Map(Object.entries(value as Record<string, unknown>));
-  for (const property of schema.required ?? [])
-    if (!record.has(property))
-      throw new McpRequestError(`MCP ${label} is missing required property: ${property}`);
-  const declaredProperties = new Map(Object.entries(schema.properties ?? {}));
-  for (const [property, propertySchema] of declaredProperties) {
-    const candidate = record.get(property);
-    if (candidate !== undefined)
-      assertSchemaValue(candidate, propertySchema, `${label}.${property}`);
-  }
-  if (schema.additionalProperties === false)
-    for (const property of record.keys())
-      if (!declaredProperties.has(property))
-        throw new McpRequestError(`MCP ${label} has unknown property: ${property}`);
-}
-
-/*** Match primitive JSON values against their declared schema type. */
-function matchesType(value: unknown, type: McpJsonSchema['type']): boolean {
-  return (
-    (type === 'string' && typeof value === 'string') ||
-    (type === 'boolean' && typeof value === 'boolean') ||
-    (type === 'number' && typeof value === 'number') ||
-    (type === 'integer' && typeof value === 'number' && Number.isInteger(value)) ||
-    (type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value))
-  );
-}
-
-/*** Restrict public integration and tool identifiers to portable MCP names. */
-function isIdentifier(value: string): boolean {
-  return /^[a-z][a-z0-9-]*$/.test(value);
+  return context;
 }

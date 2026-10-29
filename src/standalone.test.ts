@@ -178,14 +178,13 @@ async function assertSecurityAsync(consumer: string): Promise<void> {
   await writeFile(
     join(consumer, 'security.mjs'),
     "import { createMcpRegistry } from '@ankhorage/mcp';\n" +
-      "const secret = 'acceptance-secret'; const context = { actorId: 'acceptance', allowedAccounts: ['allowed'], approvalToken: 'approval' };\n" +
+      "const secret = 'acceptance-secret'; const context = { actorId: 'acceptance', allowedAccounts: ['allowed'] };\n" +
       "const tool = { id: 'write', title: 'Write', description: 'Write fixture', risk: 'write', scope: 'account', accountId: (input) => typeof input.accountId === 'string' ? input.accountId : null, inputSchema: { type: 'object', required: ['accountId'], properties: { accountId: { type: 'string' } }, additionalProperties: false }, describeChangeAsync: async () => ({ resourceId: 'fixture', before: {}, after: {} }), verifyExpectedStateAsync: async () => true, executeAsync: async () => { throw new Error(secret); } };\n" +
       "const execute = async (verifier, invocationContext = context) => createMcpRegistry({ auditSink: { recordAsync: async () => {} }, integrations: [{ id: 'fixture', tools: [tool] }], ...(verifier === undefined ? {} : { approvalVerifier: verifier }) }).executeAsync('fixture.write', { accountId: 'allowed' }, invocationContext);\n" +
       "const expectFailure = async (promise, message) => { try { await promise; throw new Error('expected rejection'); } catch (error) { if (!(error instanceof Error) || !error.message.includes(message) || error.message.includes(secret)) throw error; } };\n" +
       "await expectFailure(execute(undefined), 'externally issued');\n" +
       "await expectFailure(execute({ verifyAndConsumeAsync: async () => true }, { ...context, allowedAccounts: [] }), 'account-not-allowed');\n" +
-      "await expectFailure(execute({ verifyAndConsumeAsync: async (_proposal, token) => token !== 'invalid' }, { ...context, approvalToken: 'invalid' }), 'denied, expired, replayed');\n" +
-      "await expectFailure(execute({ verifyAndConsumeAsync: async (_proposal, token) => token !== 'expired' }, { ...context, approvalToken: 'expired' }), 'denied, expired, replayed');\n" +
+      "await expectFailure(execute({ verifyAndConsumeAsync: async () => false }), 'denied, expired, replayed');\n" +
       'let consumed = false; const replayVerifier = { verifyAndConsumeAsync: async () => { if (consumed) return false; consumed = true; return true; } };\n' +
       "await expectFailure(execute(replayVerifier), 'MCP tool execution failed.'); await expectFailure(execute(replayVerifier), 'denied, expired, replayed');\n",
     'utf8',

@@ -79,7 +79,7 @@ test('rejects a write before mutation when its required audit intent cannot be r
     registry.executeAsync(
       'example.write',
       { accountId: 'allowed' },
-      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+      { actorId: 'test', allowedAccounts: ['allowed'] },
     ),
     'durable audit recording is unavailable',
   );
@@ -116,7 +116,7 @@ test('records durable write intent and success after a valid approval', async ()
     await registry.executeAsync(
       'example.write',
       { accountId: 'allowed' },
-      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+      { actorId: 'test', allowedAccounts: ['allowed'] },
     ),
   ).toEqual({ ok: true });
   expect(outcomes).toEqual(['intent', 'executed']);
@@ -153,11 +153,11 @@ test('records a durable failure outcome without exposing provider failures', asy
     registry.executeAsync(
       'example.write',
       { accountId: 'allowed' },
-      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+      { actorId: 'test', allowedAccounts: ['allowed'] },
     ),
     'MCP tool execution failed.',
   );
-  expect(outcomes).toEqual(['intent', 'failed']);
+  expect(outcomes).toEqual(['intent', 'indeterminate']);
 });
 
 test('reports an unrecorded write outcome after mutation when its terminal audit record fails', async () => {
@@ -194,7 +194,7 @@ test('reports an unrecorded write outcome after mutation when its terminal audit
     registry.executeAsync(
       'example.write',
       { accountId: 'allowed' },
-      { actorId: 'test', allowedAccounts: ['allowed'], approvalToken: 'approval' },
+      { actorId: 'test', allowedAccounts: ['allowed'] },
     ),
     'write outcome could not be durably recorded',
   );

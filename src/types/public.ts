@@ -7,11 +7,22 @@ export interface McpJsonSchema {
   readonly type: 'boolean' | 'integer' | 'number' | 'object' | 'string';
 }
 
-export interface McpToolExecutionContext {
+export interface McpInvocationContext {
   readonly actorId: string;
   readonly allowedAccounts: readonly string[];
-  readonly approvalToken?: string;
 }
+
+/** A server-issued approval handle available only after a trusted consumer has recorded intent. */
+export interface McpConsumedApproval {
+  readonly approvalId: string;
+}
+
+/** Context delivered to a provider after registry authorization has completed. */
+export interface McpToolExecutionContext extends McpInvocationContext {
+  readonly consumedApproval?: McpConsumedApproval;
+}
+
+export type McpExecutionAuditOutcome = 'executed' | 'indeterminate';
 
 export interface McpChangeDescriptor {
   readonly after: Readonly<Record<string, unknown>> | null;
@@ -20,6 +31,12 @@ export interface McpChangeDescriptor {
 }
 
 interface McpToolBase {
+  auditOutcome?(output: unknown): McpExecutionAuditOutcome;
+  approvalFingerprintAsync?(
+    input: Readonly<Record<string, unknown>>,
+    context: McpToolExecutionContext,
+    change: McpChangeDescriptor,
+  ): Promise<string>;
   describeChangeAsync?(
     input: Readonly<Record<string, unknown>>,
     context: McpToolExecutionContext,
@@ -74,18 +91,38 @@ export interface McpApprovalProposal {
 }
 
 export interface McpApprovalVerifier {
-  verifyAndConsumeAsync(proposal: McpApprovalProposal, token: string): Promise<boolean>;
+  verifyAndConsumeAsync(proposal: McpApprovalProposal): Promise<boolean>;
+}
+
+/** Trusted host-owned consumer which atomically consumes one approval while creating a write intent. */
+export interface McpTransactionalApprovalConsumer {
+  consumeApprovalAndCreateIntentAsync(
+    proposal: McpApprovalProposal,
+  ): Promise<McpConsumedApproval | null>;
+  readonly toolIds: readonly string[];
 }
 
 export interface McpAuditEvent {
   readonly accountId: string | null;
   readonly actorId: string;
   readonly errorCode?: string;
-  readonly outcome: 'denied' | 'executed' | 'failed' | 'intent';
+  readonly outcome: 'denied' | 'executed' | 'failed' | 'indeterminate' | 'intent';
   readonly risk: McpRisk;
   readonly toolId: string;
 }
 
 export interface McpAuditSink {
   recordAsync(event: McpAuditEvent): Promise<void>;
+}
+
+/** Trusted process-local composition supplied by an MCP host, never by an MCP request. */
+export interface McpHost {
+  readonly approvalVerifier?: McpApprovalVerifier;
+  readonly auditSink?: McpAuditSink;
+  readonly context: McpInvocationContext;
+  readonly transactionalApprovalConsumers?: readonly McpTransactionalApprovalConsumer[];
+}
+
+export interface McpHostModule {
+  createMcpHostAsync(): Promise<McpHost>;
 }
