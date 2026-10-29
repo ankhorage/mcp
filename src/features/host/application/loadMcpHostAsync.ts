@@ -26,9 +26,18 @@ export async function loadMcpHostAsync(input: {
     throw new Error('MCP host module could not be imported.');
   }
   if (!isMcpHostModule(candidate)) throw new Error('MCP host module is invalid.');
-  const host = await candidate.createMcpHostAsync();
+  const host = await createMcpHostAsync(candidate);
   if (!isMcpHost(host)) throw new Error('MCP host is invalid.');
   return host;
+}
+
+/** Create one trusted host while preventing host implementation errors from escaping the boundary. */
+async function createMcpHostAsync(module: McpHostModule): Promise<unknown> {
+  try {
+    return await module.createMcpHostAsync();
+  } catch {
+    throw new Error('MCP host module could not create a valid host.');
+  }
 }
 
 /*** Check that a trusted host exposes only the composition required by the MCP runtime. */
@@ -36,20 +45,63 @@ function isMcpHost(value: unknown): value is McpHost {
   if (typeof value !== 'object' || value === null) return false;
   const host = value as McpHost;
   return (
-    typeof host.context.actorId === 'string' &&
-    host.context.actorId.trim().length > 0 &&
-    Array.isArray(host.context.allowedAccounts) &&
-    host.context.allowedAccounts.every((accountId) => typeof accountId === 'string') &&
-    (host.approvalVerifier === undefined ||
-      typeof host.approvalVerifier.verifyAndConsumeAsync === 'function') &&
-    (host.auditSink === undefined || typeof host.auditSink.recordAsync === 'function') &&
-    (host.transactionalApprovalConsumers === undefined ||
-      host.transactionalApprovalConsumers.every(isMcpTransactionalApprovalConsumer))
+    isMcpInvocationContext(host.context) &&
+    isMcpApprovalVerifier(host.approvalVerifier) &&
+    isMcpAuditSink(host.auditSink) &&
+    isMcpTransactionalApprovalConsumers(host.transactionalApprovalConsumers)
   );
 }
 
+/** Verify the host-owned invocation identity before it reaches authorization. */
+function isMcpInvocationContext(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const context = value as { readonly actorId?: unknown; readonly allowedAccounts?: unknown };
+  return (
+    typeof context.actorId === 'string' &&
+    context.actorId.trim().length > 0 &&
+    Array.isArray(context.allowedAccounts) &&
+    context.allowedAccounts.every((accountId) => typeof accountId === 'string' && accountId !== '')
+  );
+}
+
+/** Verify the optional approval dependency without invoking untrusted host properties. */
+function isMcpApprovalVerifier(value: unknown): boolean {
+  if (value === undefined) return true;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { readonly verifyAndConsumeAsync?: unknown }).verifyAndConsumeAsync ===
+      'function'
+  );
+}
+
+/** Verify the optional durable audit dependency without invoking untrusted host properties. */
+function isMcpAuditSink(value: unknown): boolean {
+  if (value === undefined) return true;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { readonly recordAsync?: unknown }).recordAsync === 'function'
+  );
+}
+
+/** Require a well-formed, unique full tool identifier for every host transactional binding. */
+function isMcpTransactionalApprovalConsumers(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  const toolIds: string[] = [];
+  for (const consumer of value) {
+    if (!isMcpTransactionalApprovalConsumer(consumer)) return false;
+    toolIds.push(...consumer.toolIds);
+  }
+  return new Set(toolIds).size === toolIds.length;
+}
+
 /** Check the shape of a host-owned transactional approval consumer. */
-function isMcpTransactionalApprovalConsumer(value: unknown): boolean {
+function isMcpTransactionalApprovalConsumer(value: unknown): value is {
+  readonly consumeApprovalAndCreateIntentAsync: unknown;
+  readonly toolIds: readonly string[];
+} {
   if (typeof value !== 'object' || value === null) return false;
   const consumer = value as {
     readonly consumeApprovalAndCreateIntentAsync?: unknown;
@@ -57,9 +109,14 @@ function isMcpTransactionalApprovalConsumer(value: unknown): boolean {
   };
   return (
     Array.isArray(consumer.toolIds) &&
-    consumer.toolIds.every((toolId) => typeof toolId === 'string') &&
+    consumer.toolIds.every(isMcpFullToolIdentifier) &&
     typeof consumer.consumeApprovalAndCreateIntentAsync === 'function'
   );
+}
+
+/** Restrict host bindings to complete provider-qualified MCP tool identifiers. */
+function isMcpFullToolIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/.test(value);
 }
 
 /*** Check the sole public factory expected from the trusted local host module. */

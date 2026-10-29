@@ -157,7 +157,7 @@ test('records a durable failure outcome without exposing provider failures', asy
     ),
     'MCP tool execution failed.',
   );
-  expect(outcomes).toEqual(['intent', 'failed']);
+  expect(outcomes).toEqual(['intent', 'indeterminate']);
 });
 
 test('reports an unrecorded write outcome after mutation when its terminal audit record fails', async () => {

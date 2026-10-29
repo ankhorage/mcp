@@ -22,6 +22,8 @@ export interface McpToolExecutionContext extends McpInvocationContext {
   readonly consumedApproval?: McpConsumedApproval;
 }
 
+export type McpExecutionAuditOutcome = 'executed' | 'indeterminate';
+
 export interface McpChangeDescriptor {
   readonly after: Readonly<Record<string, unknown>> | null;
   readonly before: Readonly<Record<string, unknown>> | null;
@@ -29,6 +31,7 @@ export interface McpChangeDescriptor {
 }
 
 interface McpToolBase {
+  auditOutcome?(output: unknown): McpExecutionAuditOutcome;
   approvalFingerprintAsync?(
     input: Readonly<Record<string, unknown>>,
     context: McpToolExecutionContext,
@@ -103,7 +106,7 @@ export interface McpAuditEvent {
   readonly accountId: string | null;
   readonly actorId: string;
   readonly errorCode?: string;
-  readonly outcome: 'denied' | 'executed' | 'failed' | 'intent';
+  readonly outcome: 'denied' | 'executed' | 'failed' | 'indeterminate' | 'intent';
   readonly risk: McpRisk;
   readonly toolId: string;
 }

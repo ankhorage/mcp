@@ -1,5 +1,4 @@
 import type {
-  McpApprovalProposal,
   McpApprovalVerifier,
   McpAuditSink,
   McpIntegration,
@@ -9,7 +8,9 @@ import type {
   McpTransactionalApprovalConsumer,
 } from '../../../types/public.js';
 import { assertMcpJsonSchema } from './assertMcpJsonSchema.js';
-import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
+import { createMcpApprovalProposalAsync } from './createMcpApprovalProposalAsync.js';
+import { createMcpOutcomeErrorCode } from './createMcpOutcomeErrorCode.js';
+import { denyMcpRequestAsync } from './denyMcpRequestAsync.js';
 import { isMcpToolIdentifier } from './isMcpToolIdentifier.js';
 import { McpRequestError } from './McpRequestError.js';
 import { recordMcpAuditBestEffortAsync } from './recordMcpAuditBestEffortAsync.js';
@@ -51,7 +52,13 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
     executeAsync: async (toolId, input, context) => {
       const registeredTool = toolsById.get(toolId);
       if (registeredTool === undefined)
-        return denyAsync(options.auditSink, toolId, context, null, 'unknown-tool');
+        return denyMcpRequestAsync({
+          accountId: null,
+          auditSink: options.auditSink,
+          context,
+          errorCode: 'unknown-tool',
+          toolId,
+        });
       return await executeRegisteredToolAsync(
         registeredTool,
         toolId,
@@ -150,7 +157,13 @@ async function executeAndAuditAsync(
       assertMcpJsonSchema(output, registeredTool.tool.outputSchema, 'output');
   } catch (error) {
     try {
-      await recordOutcomeAsync(auditSink, registeredTool, context, accountId, 'failed');
+      await recordOutcomeAsync(
+        auditSink,
+        registeredTool,
+        context,
+        accountId,
+        registeredTool.tool.risk === 'write' ? 'indeterminate' : 'failed',
+      );
     } catch {
       throw new McpRequestError('MCP write outcome could not be durably recorded.');
     }
@@ -158,7 +171,13 @@ async function executeAndAuditAsync(
     throw new McpRequestError('MCP tool execution failed.');
   }
   try {
-    await recordOutcomeAsync(auditSink, registeredTool, context, accountId, 'executed');
+    await recordOutcomeAsync(
+      auditSink,
+      registeredTool,
+      context,
+      accountId,
+      registeredTool.tool.auditOutcome?.(output) ?? 'executed',
+    );
   } catch {
     throw new McpRequestError('MCP write outcome could not be durably recorded.');
   }
@@ -171,12 +190,12 @@ async function recordOutcomeAsync(
   registeredTool: RegisteredMcpTool,
   context: McpToolExecutionContext,
   accountId: string | null,
-  outcome: 'executed' | 'failed',
+  outcome: 'executed' | 'failed' | 'indeterminate',
 ): Promise<void> {
   const event = {
     accountId,
     actorId: context.actorId,
-    ...(outcome === 'failed' ? { errorCode: 'execution-rejected' } : {}),
+    ...createMcpOutcomeErrorCode(outcome),
     outcome,
     risk: registeredTool.tool.risk,
     toolId: registeredTool.toolId,
@@ -196,9 +215,21 @@ async function getAuthorizedAccountId(
   if (registeredTool.tool.scope === 'global') return null;
   const accountId = registeredTool.tool.accountId(input);
   if (accountId === null)
-    return denyAsync(auditSink, registeredTool.toolId, context, null, 'missing-account-identity');
+    return denyMcpRequestAsync({
+      accountId: null,
+      auditSink,
+      context,
+      errorCode: 'missing-account-identity',
+      toolId: registeredTool.toolId,
+    });
   if (!context.allowedAccounts.includes(accountId))
-    return denyAsync(auditSink, registeredTool.toolId, context, accountId, 'account-not-allowed');
+    return denyMcpRequestAsync({
+      accountId,
+      auditSink,
+      context,
+      errorCode: 'account-not-allowed',
+      toolId: registeredTool.toolId,
+    });
   return accountId;
 }
 
@@ -247,14 +278,14 @@ async function assertWriteApprovalAsync(
     throw new McpRequestError(
       'Write approval is stale because provider state no longer matches the proposal.',
     );
-  const proposal = await createApprovalProposalAsync(
-    registeredTool,
-    input,
-    context,
+  const proposal = await createMcpApprovalProposalAsync({
     accountId,
-    now,
     change,
-  );
+    context,
+    now,
+    tool: registeredTool,
+    toolInput: input,
+  });
   if (transactionalConsumer !== undefined) {
     const consumedApproval =
       await transactionalConsumer.consumeApprovalAndCreateIntentAsync(proposal);
@@ -273,45 +304,4 @@ async function assertWriteApprovalAsync(
       'The supplied approval is denied, expired, replayed, or bound to another operation.',
     );
   return context;
-}
-
-/** Build the exact immutable approval binding after provider state has been verified. */
-async function createApprovalProposalAsync(
-  registeredTool: RegisteredMcpTool,
-  input: Readonly<Record<string, unknown>>,
-  context: McpInvocationContext,
-  accountId: string,
-  now: () => Date,
-  change: McpApprovalProposal['change'],
-): Promise<McpApprovalProposal> {
-  return {
-    accountId,
-    actorId: context.actorId,
-    change,
-    expiresAt: new Date(now().getTime() + 60_000).toISOString(),
-    fingerprint:
-      (await registeredTool.tool.approvalFingerprintAsync?.(input, context, change)) ??
-      createMcpApprovalFingerprint(input),
-    operation: registeredTool.tool.id,
-    toolId: registeredTool.toolId,
-  };
-}
-
-/*** Record a denial before returning a deterministic boundary error. */
-async function denyAsync(
-  auditSink: McpAuditSink | undefined,
-  toolId: string,
-  context: McpInvocationContext,
-  accountId: string | null,
-  errorCode: string,
-): Promise<never> {
-  await recordMcpAuditBestEffortAsync(auditSink, {
-    accountId,
-    actorId: context.actorId,
-    errorCode,
-    outcome: 'denied',
-    risk: 'read',
-    toolId,
-  });
-  throw new McpRequestError(`MCP request denied: ${errorCode}`);
 }

@@ -42,3 +42,43 @@ test('rejects a relative host module target', () => {
     'must be an absolute local path',
   );
 });
+
+test('fails closed for malformed privileged host configuration', () => {
+  const hosts = [
+    '{}',
+    '{ context: null }',
+    "{ context: { actorId: 'operator', allowedAccounts: [] }, transactionalApprovalConsumers: {} }",
+    "{ auditSink: null, context: { actorId: 'operator', allowedAccounts: [] } }",
+    "{ approvalVerifier: { verifyAndConsumeAsync: true }, context: { actorId: 'operator', allowedAccounts: [] } }",
+    "{ context: { actorId: 'operator', allowedAccounts: [] }, transactionalApprovalConsumers: [{ consumeApprovalAndCreateIntentAsync: () => Promise.resolve({ approvalId: 'approval-1' }), toolIds: ['google-ads.mutation', 'google-ads.mutation'] }] }",
+    "{ context: { actorId: 'operator', allowedAccounts: [] }, transactionalApprovalConsumers: [{ consumeApprovalAndCreateIntentAsync: () => Promise.resolve({ approvalId: 'approval-1' }), toolIds: ['not a tool id'] }] }",
+  ];
+  return Promise.all(hosts.map(assertInvalidHostAsync));
+});
+
+/** Assert that untrusted host configuration cannot initialize the privileged composition. */
+async function assertInvalidHostAsync(host: string): Promise<void> {
+  try {
+    await loadHostAsync(host);
+  } catch (error) {
+    expect(error).toHaveProperty('message', 'MCP host is invalid.');
+    return;
+  }
+  throw new Error('Expected an invalid host rejection.');
+}
+
+/** Write a temporary host module so runtime shape checks exercise the loaded module boundary. */
+async function loadHostAsync(host: string) {
+  const directory = await mkdtemp(join(tmpdir(), 'ankhorage-mcp-host-invalid-'));
+  const modulePath = join(directory, 'host.mjs');
+  try {
+    await writeFile(
+      modulePath,
+      `export async function createMcpHostAsync() { return ${host}; }\n`,
+      'utf8',
+    );
+    return await loadMcpHostAsync({ env: { ANKH_MCP_HOST_MODULE: modulePath } });
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+}
