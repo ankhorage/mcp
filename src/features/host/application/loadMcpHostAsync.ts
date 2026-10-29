@@ -42,7 +42,23 @@ function isMcpHost(value: unknown): value is McpHost {
     host.context.allowedAccounts.every((accountId) => typeof accountId === 'string') &&
     (host.approvalVerifier === undefined ||
       typeof host.approvalVerifier.verifyAndConsumeAsync === 'function') &&
-    (host.auditSink === undefined || typeof host.auditSink.recordAsync === 'function')
+    (host.auditSink === undefined || typeof host.auditSink.recordAsync === 'function') &&
+    (host.transactionalApprovalConsumers === undefined ||
+      host.transactionalApprovalConsumers.every(isMcpTransactionalApprovalConsumer))
+  );
+}
+
+/** Check the shape of a host-owned transactional approval consumer. */
+function isMcpTransactionalApprovalConsumer(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const consumer = value as {
+    readonly consumeApprovalAndCreateIntentAsync?: unknown;
+    readonly toolIds?: unknown;
+  };
+  return (
+    Array.isArray(consumer.toolIds) &&
+    consumer.toolIds.every((toolId) => typeof toolId === 'string') &&
+    typeof consumer.consumeApprovalAndCreateIntentAsync === 'function'
   );
 }
 

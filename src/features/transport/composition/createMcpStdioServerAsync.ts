@@ -2,7 +2,8 @@ import type {
   McpApprovalVerifier,
   McpAuditSink,
   McpIntegration,
-  McpToolExecutionContext,
+  McpInvocationContext,
+  McpTransactionalApprovalConsumer,
 } from '../../../types/public.js';
 import { createMcpRegistry } from '../../registry/application/createMcpRegistry.js';
 import { createMcpStdioServerAsync as createMcpStdioServerAdapterAsync } from '../adapters/inbound/createMcpStdioServerAsync.js';
@@ -10,8 +11,9 @@ import { createMcpStdioServerAsync as createMcpStdioServerAdapterAsync } from '.
 export interface CreateMcpStdioServerOptions {
   readonly approvalVerifier?: McpApprovalVerifier;
   readonly auditSink?: McpAuditSink;
-  readonly context: McpToolExecutionContext;
+  readonly context: McpInvocationContext;
   readonly integrations: readonly McpIntegration[];
+  readonly transactionalApprovalConsumers?: readonly McpTransactionalApprovalConsumer[];
   readonly version: string;
 }
 
@@ -27,6 +29,9 @@ export async function createMcpStdioServerAsync(
         ? {}
         : { approvalVerifier: options.approvalVerifier }),
       ...(options.auditSink === undefined ? {} : { auditSink: options.auditSink }),
+      ...(options.transactionalApprovalConsumers === undefined
+        ? {}
+        : { transactionalApprovalConsumers: options.transactionalApprovalConsumers }),
     }),
     version: options.version,
   });

@@ -17,6 +17,9 @@ export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exi
     await createMcpStdioServerAsync({
       ...(host?.approvalVerifier === undefined ? {} : { approvalVerifier: host.approvalVerifier }),
       ...(host?.auditSink === undefined ? {} : { auditSink: host.auditSink }),
+      ...(host?.transactionalApprovalConsumers === undefined
+        ? {}
+        : { transactionalApprovalConsumers: host.transactionalApprovalConsumers }),
       context: host?.context ?? {
         actorId: 'stdio',
         allowedAccounts: configuration.allowedAccounts ?? [],

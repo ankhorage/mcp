@@ -7,9 +7,19 @@ export interface McpJsonSchema {
   readonly type: 'boolean' | 'integer' | 'number' | 'object' | 'string';
 }
 
-export interface McpToolExecutionContext {
+export interface McpInvocationContext {
   readonly actorId: string;
   readonly allowedAccounts: readonly string[];
+}
+
+/** A server-issued approval handle available only after a trusted consumer has recorded intent. */
+export interface McpConsumedApproval {
+  readonly approvalId: string;
+}
+
+/** Context delivered to a provider after registry authorization has completed. */
+export interface McpToolExecutionContext extends McpInvocationContext {
+  readonly consumedApproval?: McpConsumedApproval;
 }
 
 export interface McpChangeDescriptor {
@@ -19,6 +29,11 @@ export interface McpChangeDescriptor {
 }
 
 interface McpToolBase {
+  approvalFingerprintAsync?(
+    input: Readonly<Record<string, unknown>>,
+    context: McpToolExecutionContext,
+    change: McpChangeDescriptor,
+  ): Promise<string>;
   describeChangeAsync?(
     input: Readonly<Record<string, unknown>>,
     context: McpToolExecutionContext,
@@ -76,6 +91,14 @@ export interface McpApprovalVerifier {
   verifyAndConsumeAsync(proposal: McpApprovalProposal): Promise<boolean>;
 }
 
+/** Trusted host-owned consumer which atomically consumes one approval while creating a write intent. */
+export interface McpTransactionalApprovalConsumer {
+  consumeApprovalAndCreateIntentAsync(
+    proposal: McpApprovalProposal,
+  ): Promise<McpConsumedApproval | null>;
+  readonly toolIds: readonly string[];
+}
+
 export interface McpAuditEvent {
   readonly accountId: string | null;
   readonly actorId: string;
@@ -93,7 +116,8 @@ export interface McpAuditSink {
 export interface McpHost {
   readonly approvalVerifier?: McpApprovalVerifier;
   readonly auditSink?: McpAuditSink;
-  readonly context: McpToolExecutionContext;
+  readonly context: McpInvocationContext;
+  readonly transactionalApprovalConsumers?: readonly McpTransactionalApprovalConsumer[];
 }
 
 export interface McpHostModule {
