@@ -266,7 +266,14 @@ function registerTools(integrations: readonly McpIntegration[]): readonly Regist
       toolId: `${integration.id}.${tool.id}`,
     })),
   );
+  if (tools.some(({ toolId }) => isReservedLifecycleToolIdentifier(toolId)))
+    throw new Error('MCP tool identifier conflicts with a reserved write lifecycle suffix');
   if (new Set(tools.map(({ toolId }) => toolId)).size !== tools.length)
     throw new Error('Duplicate MCP tool identifier');
   return tools.toSorted((a, b) => a.toolId.localeCompare(b.toolId));
+}
+
+/** Reserve protocol-owned suffixes so a provider cannot shadow a write lifecycle tool. */
+function isReservedLifecycleToolIdentifier(toolId: string): boolean {
+  return toolId.endsWith('.prepare') || toolId.endsWith('.execute');
 }

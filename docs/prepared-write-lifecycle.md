@@ -6,4 +6,8 @@ The host persists it atomically and performs human approval outside MCP. Executi
 
 This guarantees at-most-once provider invocation after an execution claim, not exactly-once external effect: an interrupted or timed-out provider call is `indeterminate` and must be reconciled using the stored claim, never retried as a mutation.
 
-`@ankhorage/ads-google` should map its existing `GoogleAdsMutationProposal` to `McpPreparedWrite` and use the received original proposal plus execution claim with its persisted execution/reconciliation flow. `api-gateway/apps/ads` should adapt its PostgreSQL proposal snapshot and #67 atomic approval-consume/intent functions as `McpPreparedWriteStore`; it must retain the original serialized payload and fingerprints unchanged.
+`@ankhorage/ads-google@0.4.0` uses the superseded direct write-tool contract and cannot be used for mutations with this MCP release. Its migration is to map `GoogleAdsMutationProposal` to `McpPreparedWrite`, implement `prepareWriteAsync`, `verifyPreparedWriteAsync`, and `executePreparedWriteAsync`, and execute only the host-returned original proposal with its claim. It must persist/reconcile timeout and crash outcomes from that claim and must not issue a second Google Ads mutation during recovery.
+
+`api-gateway/apps/ads` should adapt its PostgreSQL proposal snapshot and #67 atomic approval-consume/intent functions as `McpPreparedWriteStore`; it must retain the original serialized payload and fingerprints unchanged. Gateway #67/#69 are intentionally not changed by this PR.
+
+Release in dependency order: publish the compatible `@ankhorage/mcp` minor first; then publish the migrated `@ankhorage/ads-google` against that released public API; then upgrade and acceptance-test the host/gateway and the packed consumer. Keep the cross-repository issue open until that final Ads write acceptance has completed.
