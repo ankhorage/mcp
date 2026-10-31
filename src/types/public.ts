@@ -50,11 +50,15 @@ export interface McpStoredPreparedWrite {
   readonly proposal: McpPreparedWriteProposal;
   readonly snapshotFingerprint: string;
 }
-/** A trusted host must atomically consume an externally approved record and create its durable intent. */
+/** A trusted host must atomically authorize, consume, and persist an externally approved write intent. */
 export interface McpPreparedWriteStore {
   createPreparedWriteAsync(proposal: McpPreparedWriteProposal): Promise<McpStoredPreparedWrite>;
   claimApprovedWriteAndCreateIntentAsync(input: {
     readonly approvalId: string;
+    /** The process-owned invocation actor that must match the persisted proposal before consume. */
+    readonly actorId: string;
+    /** The process-owned account allow-list that must include the persisted proposal account before consume. */
+    readonly allowedAccounts: readonly string[];
     readonly toolId: string;
   }): Promise<(McpStoredPreparedWrite & { readonly executionClaim: McpExecutionClaim }) | null>;
 }

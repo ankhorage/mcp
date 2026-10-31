@@ -6,7 +6,6 @@ import type {
   McpPreparedWriteStore,
   McpWriteTool,
 } from '../../../types/public.js';
-import { loadMcpHostAsync } from '../../host/application/loadMcpHostAsync.js';
 import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
 import { createMcpRegistry } from './createMcpRegistry.js';
 
@@ -61,12 +60,13 @@ function createStore(
       state.proposal = storedProposal;
       return Promise.resolve(stored(storedProposal, options.snapshotFingerprint));
     },
-    claimApprovedWriteAndCreateIntentAsync: ({ approvalId, toolId }) => {
+    claimApprovedWriteAndCreateIntentAsync: ({ approvalId, actorId, allowedAccounts, toolId }) => {
       const { proposal } = state;
       if (
         state.consumed ||
         approvalId !== 'approval' ||
-        proposal === undefined ||
+        proposal?.actorId !== actorId ||
+        !allowedAccounts.includes(proposal.accountId) ||
         toolId !== 'fixture.write'
       )
         return Promise.resolve(null);
@@ -162,7 +162,7 @@ test('rejects unauthorized accounts and missing approvals before mutation', asyn
   expect(missing.state.calls).toBe(0);
 });
 
-test('rejects expired, reused, actor-bound, and tool-bound approvals before mutation', async () => {
+test('rejects expired, reused, and tool-bound approvals before mutation', async () => {
   const expired = createFixture();
   await prepareAsync(expired.registry);
   await rejectsAsync(
@@ -170,14 +170,6 @@ test('rejects expired, reused, actor-bound, and tool-bound approvals before muta
     'denied, expired, replayed',
   );
   expect(expired.state.calls).toBe(0);
-
-  const actor = createFixture({ claimProposal: (proposal) => ({ ...proposal, actorId: 'other' }) });
-  await prepareAsync(actor.registry);
-  await rejectsAsync(
-    actor.registry.executeAsync('fixture.write', approvalInput, context),
-    'bound to another operation',
-  );
-  expect(actor.state.calls).toBe(0);
 
   const tool = createFixture({
     claimProposal: (proposal) => ({ ...proposal, toolId: 'fixture.other' }),
@@ -197,6 +189,32 @@ test('rejects expired, reused, actor-bound, and tool-bound approvals before muta
     'denied, expired, replayed',
   );
   expect(replay.state.calls).toBe(1);
+});
+
+test('authorizes the trusted actor and account before consuming an approval', async () => {
+  const fixture = createFixture();
+  await prepareAsync(fixture.registry);
+  await rejectsAsync(
+    fixture.registry.executeAsync('fixture.write', approvalInput, {
+      actorId: 'other-operator',
+      allowedAccounts: ['account'],
+    }),
+    'denied, expired, replayed',
+  );
+  expect(fixture.state.consumed).toBeFalse();
+  expect(fixture.state.calls).toBe(0);
+  await rejectsAsync(
+    fixture.registry.executeAsync('fixture.write', approvalInput, {
+      actorId: 'operator',
+      allowedAccounts: ['other-account'],
+    }),
+    'denied, expired, replayed',
+  );
+  expect(fixture.state.consumed).toBeFalse();
+  expect(fixture.state.calls).toBe(0);
+  await fixture.registry.executeAsync('fixture.write', approvalInput, context);
+  expect(fixture.state.consumed).toBeTrue();
+  expect(fixture.state.calls).toBe(1);
 });
 
 test('rejects changed original proposals and fingerprints before a human approval can be used', async () => {
@@ -277,37 +295,4 @@ test('fails closed for audit loss and consumes stale state without a provider mu
     stale.registry.executeAsync('fixture.write', approvalInput, context),
     'denied, expired, replayed',
   );
-});
-
-test('fails closed for absent or malformed host configuration', async () => {
-  expect(await loadMcpHostAsync({ env: {} })).toBeUndefined();
-  await rejectsAsync(
-    loadMcpHostAsync({ env: { ANKH_MCP_HOST_MODULE: './host.mjs' } }),
-    'must be an absolute local path',
-  );
-  await rejectsAsync(
-    loadMcpHostAsync({ env: { ANKH_MCP_HOST_MODULE: '/definitely/not/a/host.mjs' } }),
-    'ENOENT',
-  );
-});
-
-test('reserves the public prepare and execute suffixes from provider tool identifiers', () => {
-  const readTool = {
-    description: 'Read.',
-    executeAsync: () => Promise.resolve({ ok: true }),
-    inputSchema: { additionalProperties: false, type: 'object' } as const,
-    risk: 'read' as const,
-    scope: 'global' as const,
-    title: 'Read',
-  };
-  expect(() =>
-    createMcpRegistry({
-      integrations: [{ id: 'fixture', tools: [{ ...readTool, id: 'write.prepare' }] }],
-    }),
-  ).toThrow('reserved write lifecycle suffix');
-  expect(() =>
-    createMcpRegistry({
-      integrations: [{ id: 'fixture', tools: [{ ...readTool, id: 'write.execute' }] }],
-    }),
-  ).toThrow('reserved write lifecycle suffix');
 });

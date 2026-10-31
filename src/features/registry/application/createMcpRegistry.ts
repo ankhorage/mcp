@@ -203,6 +203,8 @@ async function claimApprovedWriteAsync(
   try {
     claimed = await store.claimApprovedWriteAndCreateIntentAsync({
       approvalId,
+      actorId: context.actorId,
+      allowedAccounts: context.allowedAccounts,
       toolId: registered.toolId,
     });
   } catch {
