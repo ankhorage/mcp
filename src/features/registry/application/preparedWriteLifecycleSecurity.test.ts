@@ -17,6 +17,7 @@ type FixtureOptions = Readonly<{
   auditFailsFor?: 'executed' | 'intent';
   claimProposal?: (proposal: McpPreparedWriteProposal) => McpPreparedWriteProposal;
   executeFails?: boolean;
+  snapshotFingerprint?: string;
   stateMatches?: boolean;
   storedProposal?: (proposal: McpPreparedWriteProposal) => McpPreparedWriteProposal;
 }>;
@@ -58,7 +59,7 @@ function createStore(
     createPreparedWriteAsync: (proposal) => {
       const storedProposal = options.storedProposal?.(proposal) ?? proposal;
       state.proposal = storedProposal;
-      return Promise.resolve(stored(storedProposal));
+      return Promise.resolve(stored(storedProposal, options.snapshotFingerprint));
     },
     claimApprovedWriteAndCreateIntentAsync: ({ approvalId, toolId }) => {
       const { proposal } = state;
@@ -72,7 +73,7 @@ function createStore(
       state.consumed = true;
       const claimedProposal = options.claimProposal?.(proposal) ?? proposal;
       return Promise.resolve({
-        ...stored(claimedProposal),
+        ...stored(claimedProposal, options.snapshotFingerprint),
         executionClaim: { approvalId, intentId: 'intent' },
       });
     },
@@ -101,12 +102,12 @@ function createTool(state: { calls: number }, options: FixtureOptions): McpWrite
 }
 
 /** Return the trusted host envelope with a fingerprint of exactly the proposal it returned. */
-function stored(proposal: McpPreparedWriteProposal) {
+function stored(proposal: McpPreparedWriteProposal, snapshotFingerprint?: string) {
   return {
     approvalId: 'approval',
     expiresAt: '2026-11-01T00:00:00.000Z',
     proposal,
-    snapshotFingerprint: createMcpApprovalFingerprint(proposal),
+    snapshotFingerprint: snapshotFingerprint ?? createMcpApprovalFingerprint(proposal),
   };
 }
 
@@ -137,7 +138,21 @@ async function rejectsAsync(promise: Promise<unknown>, expected: string): Promis
   throw new Error('Expected rejection.');
 }
 
-test('rejects unapproved, expired, reused, actor-bound, and tool-bound approvals before mutation', async () => {
+test('rejects unauthorized accounts and missing approvals before mutation', async () => {
+  const unauthorized = createFixture();
+  await rejectsAsync(
+    unauthorized.registry.prepareWriteAsync(
+      'fixture.write',
+      {},
+      {
+        actorId: 'operator',
+        allowedAccounts: ['other'],
+      },
+    ),
+    'account-not-allowed',
+  );
+  expect(unauthorized.state.calls).toBe(0);
+
   const missing = createFixture();
   await prepareAsync(missing.registry);
   await rejectsAsync(
@@ -145,7 +160,9 @@ test('rejects unapproved, expired, reused, actor-bound, and tool-bound approvals
     'accepts only an approvalId',
   );
   expect(missing.state.calls).toBe(0);
+});
 
+test('rejects expired, reused, actor-bound, and tool-bound approvals before mutation', async () => {
   const expired = createFixture();
   await prepareAsync(expired.registry);
   await rejectsAsync(
@@ -195,7 +212,7 @@ test('rejects changed original proposals and fingerprints before a human approva
   );
 
   const fingerprint = createFixture({
-    storedProposal: (proposal) => ({ ...proposal, fingerprint: 'tampered' }),
+    snapshotFingerprint: 'tampered',
   });
   await rejectsAsync(
     fingerprint.registry.prepareWriteAsync('fixture.write', {}, context),
