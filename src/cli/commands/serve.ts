@@ -15,11 +15,10 @@ export async function serve(request: AnkhCommandExecutionRequest): Promise<{ exi
     });
     const host = await loadMcpHostAsync({ env: request.context.env });
     await createMcpStdioServerAsync({
-      ...(host?.approvalVerifier === undefined ? {} : { approvalVerifier: host.approvalVerifier }),
       ...(host?.auditSink === undefined ? {} : { auditSink: host.auditSink }),
-      ...(host?.transactionalApprovalConsumers === undefined
+      ...(host?.preparedWriteStore === undefined
         ? {}
-        : { transactionalApprovalConsumers: host.transactionalApprovalConsumers }),
+        : { preparedWriteStore: host.preparedWriteStore }),
       context: host?.context ?? {
         actorId: 'stdio',
         allowedAccounts: configuration.allowedAccounts ?? [],

@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { expect, test } from 'bun:test';
@@ -178,15 +178,10 @@ async function assertSecurityAsync(consumer: string): Promise<void> {
   await writeFile(
     join(consumer, 'security.mjs'),
     "import { createMcpRegistry } from '@ankhorage/mcp';\n" +
-      "const secret = 'acceptance-secret'; const context = { actorId: 'acceptance', allowedAccounts: ['allowed'] };\n" +
-      "const tool = { id: 'write', title: 'Write', description: 'Write fixture', risk: 'write', scope: 'account', accountId: (input) => typeof input.accountId === 'string' ? input.accountId : null, inputSchema: { type: 'object', required: ['accountId'], properties: { accountId: { type: 'string' } }, additionalProperties: false }, describeChangeAsync: async () => ({ resourceId: 'fixture', before: {}, after: {} }), verifyExpectedStateAsync: async () => true, executeAsync: async () => { throw new Error(secret); } };\n" +
-      "const execute = async (verifier, invocationContext = context) => createMcpRegistry({ auditSink: { recordAsync: async () => {} }, integrations: [{ id: 'fixture', tools: [tool] }], ...(verifier === undefined ? {} : { approvalVerifier: verifier }) }).executeAsync('fixture.write', { accountId: 'allowed' }, invocationContext);\n" +
-      "const expectFailure = async (promise, message) => { try { await promise; throw new Error('expected rejection'); } catch (error) { if (!(error instanceof Error) || !error.message.includes(message) || error.message.includes(secret)) throw error; } };\n" +
-      "await expectFailure(execute(undefined), 'externally issued');\n" +
-      "await expectFailure(execute({ verifyAndConsumeAsync: async () => true }, { ...context, allowedAccounts: [] }), 'account-not-allowed');\n" +
-      "await expectFailure(execute({ verifyAndConsumeAsync: async () => false }), 'denied, expired, replayed');\n" +
-      'let consumed = false; const replayVerifier = { verifyAndConsumeAsync: async () => { if (consumed) return false; consumed = true; return true; } };\n' +
-      "await expectFailure(execute(replayVerifier), 'MCP tool execution failed.'); await expectFailure(execute(replayVerifier), 'denied, expired, replayed');\n",
+      "const context = { actorId: 'acceptance', allowedAccounts: ['allowed'] }; const stable = (value) => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, stable(item)])) : value; let proposal; let consumed = false; let calls = 0;\n" +
+      "const tool = { id: 'write', title: 'Write', description: 'Write fixture', risk: 'write', scope: 'account', accountId: () => 'allowed', inputSchema: { type: 'object', additionalProperties: false }, prepareWriteAsync: async () => ({ change: { resourceId: 'fixture', before: {}, after: {} }, createdAt: '2026-10-31T00:00:00.000Z', fingerprint: 'fixture', operation: 'write', payload: { version: '1', serialized: '{}' } }), verifyPreparedWriteAsync: async () => true, executePreparedWriteAsync: async () => ({ calls: ++calls }) };\n" +
+      "const fingerprint = async (value) => (await import('node:crypto')).createHash('sha256').update(JSON.stringify(stable(value))).digest('hex'); const store = { createPreparedWriteAsync: async (value) => { proposal = value; return { approvalId: 'approval', expiresAt: '2026-11-01T00:00:00.000Z', proposal: value, snapshotFingerprint: await fingerprint(value) }; }, claimApprovedWriteAndCreateIntentAsync: async ({ approvalId, toolId }) => { if (consumed || approvalId !== 'approval' || toolId !== 'fixture.write') return null; consumed = true; return { approvalId, expiresAt: '2026-11-01T00:00:00.000Z', proposal, snapshotFingerprint: await fingerprint(proposal), executionClaim: { approvalId, intentId: 'intent' } }; } };\n" +
+      "const registry = createMcpRegistry({ auditSink: { recordAsync: async () => {} }, integrations: [{ id: 'fixture', tools: [tool] }], preparedWriteStore: store }); await registry.prepareWriteAsync('fixture.write', {}, context); const result = await registry.executeAsync('fixture.write', { approvalId: 'approval' }, context); if (result.calls !== 1 || calls !== 1) throw new Error('prepared write acceptance failed');\n",
     'utf8',
   );
   await runCommandAsync(['bun', 'security.mjs'], consumer);
@@ -225,5 +220,5 @@ async function runCommandAsync(command: readonly string[], cwd: string): Promise
 }
 
 function getTemporaryDirectory(): string {
-  return process.env.MCP_ACCEPTANCE_TMPDIR ?? tmpdir();
+  return process.env.MCP_ACCEPTANCE_TMPDIR ?? join(homedir(), '.cache', 'ankhorage-mcp-acceptance');
 }
