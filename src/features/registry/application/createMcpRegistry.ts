@@ -9,13 +9,12 @@ import type {
   McpWriteTool,
 } from '../../../types/public.js';
 import { assertMcpJsonSchema } from './assertMcpJsonSchema.js';
-import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
-import { createMcpApprovalProposalAsync } from './createMcpApprovalProposalAsync.js';
+import { claimMcpApprovedWriteAsync } from './claimMcpApprovedWriteAsync.js';
+import { executeMcpClaimedWriteAsync } from './executeMcpClaimedWriteAsync.js';
 import { isMcpToolIdentifier } from './isMcpToolIdentifier.js';
 import { McpRequestError } from './McpRequestError.js';
+import { prepareMcpWriteAsync } from './prepareMcpWriteAsync.js';
 import { recordMcpAuditBestEffortAsync } from './recordMcpAuditBestEffortAsync.js';
-import { recordMcpAuditRequiredAsync } from './recordMcpAuditRequiredAsync.js';
-import { sanitizeMcpRequestAsync } from './sanitizeMcpRequestAsync.js';
 
 export interface McpRegistry {
   closeAsync(): Promise<void>;
@@ -55,12 +54,13 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
       if (options.preparedWriteStore === undefined)
         throw new McpRequestError('Write tools require a trusted prepared-write host.');
       assertMcpJsonSchema(input, registered.tool.inputSchema, 'input');
-      return await prepareRegisteredWriteAsync(
-        registered,
-        input,
+      return await prepareMcpWriteAsync({
         context,
-        options.preparedWriteStore,
-      );
+        executeInput: input,
+        preparedWriteStore: options.preparedWriteStore,
+        tool: registered.tool,
+        toolId: registered.toolId,
+      });
     },
     executeAsync: async (toolId, input, context) => {
       const registered = toolsById.get(toolId);
@@ -112,140 +112,23 @@ async function executeWriteAsync(
   context: McpInvocationContext,
   options: CreateMcpRegistryOptions,
 ): Promise<unknown> {
-  const claimed = await claimApprovedWriteAsync(
-    registered,
-    input,
+  const claimed = await claimMcpApprovedWriteAsync({
     context,
-    options.preparedWriteStore,
-  );
+    executeInput: input,
+    preparedWriteStore: options.preparedWriteStore,
+    toolId: registered.toolId,
+  });
   const executionContext: McpToolExecutionContext = {
     ...context,
     executionClaim: claimed.executionClaim,
   };
-  const writeTool = registered.tool;
-  if (
-    !(await sanitizeMcpRequestAsync(
-      () => writeTool.verifyPreparedWriteAsync(claimed.proposal, executionContext),
-      'MCP write verification failed.',
-    ))
-  )
-    throw new McpRequestError(
-      'Write approval is stale because provider state no longer matches the proposal.',
-    );
-  await recordMcpAuditRequiredAsync(options.auditSink, {
-    accountId: claimed.proposal.accountId,
-    actorId: context.actorId,
-    outcome: 'intent',
-    risk: 'write',
-    toolId: registered.toolId,
-  });
-  return await executeClaimedWriteAsync(
-    writeTool,
-    registered.toolId,
+  return await executeMcpClaimedWriteAsync({
+    auditSink: options.auditSink,
     claimed,
-    executionContext,
-    options.auditSink,
-  );
-}
-
-/** Prepare and persist one provider proposal without disclosing provider or host failures. */
-async function prepareRegisteredWriteAsync(
-  registered: RegisteredMcpWriteTool,
-  input: Readonly<Record<string, unknown>>,
-  context: McpInvocationContext,
-  store: McpPreparedWriteStore,
-): Promise<{ readonly approvalId: string; readonly expiresAt: string }> {
-  return await sanitizeMcpRequestAsync(async () => {
-    const accountId = getAccountId(registered.tool, input, context);
-    const prepared = await registered.tool.prepareWriteAsync(input, context);
-    const proposal = createMcpApprovalProposalAsync({
-      accountId,
-      context,
-      prepared,
-      tool: registered,
-    });
-    const stored = await store.createPreparedWriteAsync(proposal);
-    if (
-      !sameProposal(stored.proposal, proposal) ||
-      stored.snapshotFingerprint !== createMcpApprovalFingerprint(proposal)
-    )
-      throw new McpRequestError('Prepared write storage did not preserve the original proposal.');
-    return { approvalId: stored.approvalId, expiresAt: stored.expiresAt };
-  }, 'MCP write preparation failed.');
-}
-
-/** Invoke a claimed provider operation once and leave a durable terminal outcome for reconciliation. */
-async function executeClaimedWriteAsync(
-  writeTool: McpWriteTool,
-  toolId: string,
-  claimed: NonNullable<
-    Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>
-  >,
-  context: McpToolExecutionContext,
-  auditSink: McpAuditSink | undefined,
-): Promise<unknown> {
-  try {
-    const output = await writeTool.executePreparedWriteAsync(claimed.proposal, context);
-    if (writeTool.outputSchema !== undefined)
-      assertMcpJsonSchema(output, writeTool.outputSchema, 'output');
-    await recordMcpAuditRequiredAsync(auditSink, {
-      accountId: claimed.proposal.accountId,
-      actorId: context.actorId,
-      outcome: writeTool.auditOutcome?.(output) ?? 'executed',
-      risk: 'write',
-      toolId,
-    });
-    return output;
-  } catch (error) {
-    await recordMcpAuditRequiredAsync(auditSink, {
-      accountId: claimed.proposal.accountId,
-      actorId: context.actorId,
-      outcome: 'indeterminate',
-      risk: 'write',
-      toolId,
-    });
-    if (error instanceof McpRequestError) throw error;
-    throw new McpRequestError('MCP tool execution failed.');
-  }
-}
-
-/** Consume one human-approved proposal and create its durable execution intent before any provider call. */
-async function claimApprovedWriteAsync(
-  registered: RegisteredMcpWriteTool,
-  input: Readonly<Record<string, unknown>>,
-  context: McpInvocationContext,
-  store: McpPreparedWriteStore | undefined,
-): Promise<
-  NonNullable<Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>>
-> {
-  const { approvalId } = input;
-  if (typeof approvalId !== 'string' || Object.keys(input).length !== 1)
-    throw new McpRequestError('Write execution accepts only an approvalId.');
-  if (store === undefined)
-    throw new McpRequestError('Write tools require a trusted prepared-write host.');
-  let claimed: Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>;
-  try {
-    claimed = await store.claimApprovedWriteAndCreateIntentAsync({
-      approvalId,
-      actorId: context.actorId,
-      allowedAccounts: context.allowedAccounts,
-      toolId: registered.toolId,
-    });
-  } catch {
-    throw new McpRequestError(
-      'MCP write rejected because prepared-write persistence is unavailable.',
-    );
-  }
-  if (
-    claimed === null ||
-    !sameStoredWrite(registered, claimed) ||
-    claimed.proposal.actorId !== context.actorId ||
-    !context.allowedAccounts.includes(claimed.proposal.accountId)
-  )
-    throw new McpRequestError(
-      'The supplied approval is denied, expired, replayed, or bound to another operation.',
-    );
-  return claimed;
+    context: executionContext,
+    preparedWriteStore: options.preparedWriteStore,
+    tool: registered.tool,
+  });
 }
 
 /** Enforce an account identity derived only from the provider input during preparation. */
@@ -261,21 +144,6 @@ function getAccountId(
   if (!context.allowedAccounts.includes(accountId))
     throw new McpRequestError('MCP request denied: account-not-allowed');
   return accountId;
-}
-function sameProposal(left: unknown, right: unknown): boolean {
-  return createMcpApprovalFingerprint(left) === createMcpApprovalFingerprint(right);
-}
-function sameStoredWrite(
-  registered: RegisteredMcpWriteTool,
-  claimed: Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>,
-): claimed is NonNullable<typeof claimed> {
-  return (
-    claimed !== null &&
-    claimed.proposal.toolId === registered.toolId &&
-    claimed.proposal.operation.length > 0 &&
-    claimed.proposal.change.resourceId.length > 0 &&
-    claimed.snapshotFingerprint === createMcpApprovalFingerprint(claimed.proposal)
-  );
 }
 
 /** Narrow a registered descriptor at the discriminated provider tool boundary. */

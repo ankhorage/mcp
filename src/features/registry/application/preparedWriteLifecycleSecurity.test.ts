@@ -1,142 +1,12 @@
 import { expect, test } from 'bun:test';
 
-import type {
-  McpAuditEvent,
-  McpPreparedWriteProposal,
-  McpPreparedWriteStore,
-  McpWriteTool,
-} from '../../../types/public.js';
-import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
-import { createMcpRegistry } from './createMcpRegistry.js';
-
-const context = { actorId: 'operator', allowedAccounts: ['account'] };
-const approvalInput = { approvalId: 'approval' };
-
-type FixtureOptions = Readonly<{
-  auditFailsFor?: 'executed' | 'intent';
-  claimProposal?: (proposal: McpPreparedWriteProposal) => McpPreparedWriteProposal;
-  executeFails?: boolean;
-  snapshotFingerprint?: string;
-  stateMatches?: boolean;
-  storedProposal?: (proposal: McpPreparedWriteProposal) => McpPreparedWriteProposal;
-}>;
-
-/** Build a fake provider and trusted host whose observable effects can be asserted precisely. */
-function createFixture(options: FixtureOptions = {}) {
-  const state = {
-    audit: [] as McpAuditEvent[],
-    calls: 0,
-    consumed: false,
-    proposal: undefined as McpPreparedWriteProposal | undefined,
-  };
-  const store = createStore(state, options);
-  const tool = createTool(state, options);
-  const registry = createMcpRegistry({
-    auditSink: {
-      recordAsync: (event) => {
-        state.audit.push(event);
-        return event.outcome === options.auditFailsFor
-          ? Promise.reject(new Error('audit unavailable'))
-          : Promise.resolve();
-      },
-    },
-    integrations: [{ id: 'fixture', tools: [tool] }],
-    preparedWriteStore: store,
-  });
-  return { registry, state };
-}
-
-/** Model the trusted host's atomic approval consume with mutable test-only state. */
-function createStore(
-  state: {
-    consumed: boolean;
-    proposal: McpPreparedWriteProposal | undefined;
-  },
-  options: FixtureOptions,
-): McpPreparedWriteStore {
-  return {
-    createPreparedWriteAsync: (proposal) => {
-      const storedProposal = options.storedProposal?.(proposal) ?? proposal;
-      state.proposal = storedProposal;
-      return Promise.resolve(stored(storedProposal, options.snapshotFingerprint));
-    },
-    claimApprovedWriteAndCreateIntentAsync: ({ approvalId, actorId, allowedAccounts, toolId }) => {
-      const { proposal } = state;
-      if (
-        state.consumed ||
-        approvalId !== 'approval' ||
-        proposal?.actorId !== actorId ||
-        !allowedAccounts.includes(proposal.accountId) ||
-        toolId !== 'fixture.write'
-      )
-        return Promise.resolve(null);
-      state.consumed = true;
-      const claimedProposal = options.claimProposal?.(proposal) ?? proposal;
-      return Promise.resolve({
-        ...stored(claimedProposal, options.snapshotFingerprint),
-        executionClaim: { approvalId, intentId: 'intent' },
-      });
-    },
-  };
-}
-
-/** Build a fake write provider whose verification and invocation can be made to fail independently. */
-function createTool(state: { calls: number }, options: FixtureOptions): McpWriteTool {
-  return {
-    accountId: () => 'account',
-    description: 'Mutate the fixture.',
-    executePreparedWriteAsync: () => {
-      state.calls += 1;
-      return options.executeFails === true
-        ? Promise.reject(new Error('provider timeout or crash'))
-        : Promise.resolve({ ok: true });
-    },
-    id: 'write',
-    inputSchema: { additionalProperties: false, type: 'object' },
-    prepareWriteAsync: () => Promise.resolve(prepared()),
-    risk: 'write',
-    scope: 'account',
-    title: 'Write',
-    verifyPreparedWriteAsync: () => Promise.resolve(options.stateMatches !== false),
-  };
-}
-
-/** Return the trusted host envelope with a fingerprint of exactly the proposal it returned. */
-function stored(proposal: McpPreparedWriteProposal, snapshotFingerprint?: string) {
-  return {
-    approvalId: 'approval',
-    expiresAt: '2026-11-01T00:00:00.000Z',
-    proposal,
-    snapshotFingerprint: snapshotFingerprint ?? createMcpApprovalFingerprint(proposal),
-  };
-}
-
-/** Return a provider-generated immutable change proposal. */
-function prepared() {
-  return {
-    change: { after: { enabled: true }, before: { enabled: false }, resourceId: 'resource' },
-    createdAt: '2026-10-31T00:00:00.000Z',
-    fingerprint: 'provider-fingerprint',
-    operation: 'enable',
-    payload: { serialized: '{"enabled":true}', version: '1' },
-  };
-}
-
-/** Prepare one host-persisted approval for execution. */
-async function prepareAsync(registry: ReturnType<typeof createMcpRegistry>): Promise<void> {
-  await registry.prepareWriteAsync('fixture.write', {}, context);
-}
-
-/** Assert a request fails without relying on provider-specific error details. */
-async function rejectsAsync(promise: Promise<unknown>, expected: string): Promise<void> {
-  try {
-    await promise;
-  } catch (error) {
-    expect((error as Error).message).toContain(expected);
-    return;
-  }
-  throw new Error('Expected rejection.');
-}
+import {
+  createPreparedWriteSecurityFixture as createFixture,
+  preparePreparedWriteSecurityFixtureAsync as prepareAsync,
+  rejectPreparedWriteSecurityFixtureAsync as rejectsAsync,
+  securityApprovalInput as approvalInput,
+  securityContext as context,
+} from './preparedWriteLifecycleSecurityFixture.js';
 
 test('rejects unauthorized accounts and missing approvals before mutation', async () => {
   const unauthorized = createFixture();
@@ -257,7 +127,8 @@ test('claims concurrent executions once and never retries an indeterminate provi
   );
   expect(indeterminate.state.calls).toBe(1);
   expect(indeterminate.state.audit.map(({ outcome }) => outcome)).toEqual([
-    'intent',
+    'intent_persisted',
+    'provider_call_started',
     'indeterminate',
   ]);
   await rejectsAsync(
@@ -267,8 +138,32 @@ test('claims concurrent executions once and never retries an indeterminate provi
   expect(indeterminate.state.calls).toBe(1);
 });
 
+test('durably settles verification rejection and provider verification exceptions without mutation', async () => {
+  const rejected = createFixture({ stateMatches: false });
+  await prepareAsync(rejected.registry);
+  await rejectsAsync(
+    rejected.registry.executeAsync('fixture.write', approvalInput, context),
+    'state no longer matches',
+  );
+  expect(rejected.state.calls).toBe(0);
+  expect(rejected.state.settlements).toEqual([
+    { outcome: 'not_applied', reasonCode: 'state-mismatch' },
+  ]);
+
+  const errored = createFixture({ verificationThrows: true });
+  await prepareAsync(errored.registry);
+  await rejectsAsync(
+    errored.registry.executeAsync('fixture.write', approvalInput, context),
+    'verification failed',
+  );
+  expect(errored.state.calls).toBe(0);
+  expect(errored.state.settlements).toEqual([
+    { outcome: 'not_applied', reasonCode: 'verification-error' },
+  ]);
+});
+
 test('fails closed for audit loss and consumes stale state without a provider mutation', async () => {
-  const before = createFixture({ auditFailsFor: 'intent' });
+  const before = createFixture({ auditFailsFor: 'intent_persisted' });
   await prepareAsync(before.registry);
   await rejectsAsync(
     before.registry.executeAsync('fixture.write', approvalInput, context),
@@ -276,13 +171,14 @@ test('fails closed for audit loss and consumes stale state without a provider mu
   );
   expect(before.state.calls).toBe(0);
 
-  const after = createFixture({ auditFailsFor: 'executed' });
+  const after = createFixture({ auditFailsFor: 'mutation_verified' });
   await prepareAsync(after.registry);
   await rejectsAsync(
     after.registry.executeAsync('fixture.write', approvalInput, context),
     'durable audit',
   );
   expect(after.state.calls).toBe(1);
+  expect(after.state.settlements).toEqual([{ outcome: 'executed' }]);
 
   const stale = createFixture({ stateMatches: false });
   await prepareAsync(stale.registry);

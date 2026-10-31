@@ -46,6 +46,8 @@ function createStore(
         executionClaim: { approvalId, intentId: 'intent' },
       });
     },
+    reconcilePreparedWriteAsync: () => Promise.resolve({ outcome: 'executing' }),
+    settlePreparedWriteAsync: () => Promise.resolve(),
   };
 }
 

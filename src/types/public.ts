@@ -13,6 +13,12 @@ export interface McpExecutionClaim {
   readonly approvalId: string;
   readonly intentId: string;
 }
+export type McpPreparedWriteSettlementOutcome = 'executed' | 'indeterminate' | 'not_applied';
+export interface McpPreparedWriteSettlement {
+  readonly executionClaim: McpExecutionClaim;
+  readonly outcome: McpPreparedWriteSettlementOutcome;
+  readonly reasonCode?: string;
+}
 export interface McpToolExecutionContext extends McpInvocationContext {
   readonly executionClaim?: McpExecutionClaim;
 }
@@ -61,6 +67,12 @@ export interface McpPreparedWriteStore {
     readonly allowedAccounts: readonly string[];
     readonly toolId: string;
   }): Promise<(McpStoredPreparedWrite & { readonly executionClaim: McpExecutionClaim }) | null>;
+  /** Atomically settle one intent. Implementations must make same-outcome repeats idempotent and reject conflicts. */
+  settlePreparedWriteAsync(settlement: McpPreparedWriteSettlement): Promise<void>;
+  /** Read-only recovery; implementations must never invoke the provider from this operation. */
+  reconcilePreparedWriteAsync(executionClaim: McpExecutionClaim): Promise<{
+    readonly outcome: McpPreparedWriteSettlementOutcome | 'executing';
+  }>;
 }
 interface McpToolBase {
   readonly description: string;
@@ -107,14 +119,37 @@ export interface McpIntegrationModule {
   createIntegrationAsync?(): Promise<McpIntegration>;
   readonly integration?: McpIntegration;
 }
-export interface McpAuditEvent {
+export interface McpReadAuditEvent {
   readonly accountId: string | null;
   readonly actorId: string;
   readonly errorCode?: string;
-  readonly outcome: 'denied' | 'executed' | 'failed' | 'indeterminate' | 'intent';
-  readonly risk: McpRisk;
+  readonly outcome: 'denied' | 'failed';
+  readonly risk: 'read';
   readonly toolId: string;
 }
+export type McpWriteAuditOutcome =
+  | 'indeterminate'
+  | 'intent_persisted'
+  | 'mutation_verified'
+  | 'preflight_rejected'
+  | 'provider_call_started'
+  | 'reconciliation_completed';
+export interface McpWriteAuditEvent {
+  readonly accountId: string;
+  readonly actorId: string;
+  readonly approvalId: string;
+  /** Stable idempotency key. Hosts persist this append-only, normally through a transactionally written outbox. */
+  readonly eventId: string;
+  readonly intentId: string;
+  readonly operation: string;
+  readonly outcome: McpWriteAuditOutcome;
+  readonly providerProposalFingerprint: string;
+  readonly reasonCode?: string;
+  readonly risk: 'write';
+  readonly snapshotFingerprint: string;
+  readonly toolId: string;
+}
+export type McpAuditEvent = McpReadAuditEvent | McpWriteAuditEvent;
 export interface McpAuditSink {
   recordAsync(event: McpAuditEvent): Promise<void>;
 }

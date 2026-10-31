@@ -7,9 +7,18 @@ export async function recordMcpAuditRequiredAsync(
   event: Parameters<McpAuditSink['recordAsync']>[0],
 ): Promise<void> {
   try {
-    await auditSink?.recordAsync(event);
     if (auditSink === undefined) throw new Error('audit sink is unavailable');
+    await auditSink.recordAsync(event);
   } catch {
-    throw new McpRequestError('MCP write rejected because durable audit recording is unavailable.');
+    try {
+      // A host keys write events by eventId, so this covers a committed append whose response was lost.
+      if (auditSink === undefined) throw new Error('audit sink is unavailable');
+      await auditSink.recordAsync(event);
+      return;
+    } catch {
+      throw new McpRequestError(
+        'MCP write rejected because durable audit recording is unavailable.',
+      );
+    }
   }
 }
