@@ -11,9 +11,11 @@ import type {
 import { assertMcpJsonSchema } from './assertMcpJsonSchema.js';
 import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
 import { createMcpApprovalProposalAsync } from './createMcpApprovalProposalAsync.js';
+import { isMcpToolIdentifier } from './isMcpToolIdentifier.js';
 import { McpRequestError } from './McpRequestError.js';
 import { recordMcpAuditBestEffortAsync } from './recordMcpAuditBestEffortAsync.js';
 import { recordMcpAuditRequiredAsync } from './recordMcpAuditRequiredAsync.js';
+import { sanitizeMcpRequestAsync } from './sanitizeMcpRequestAsync.js';
 
 export interface McpRegistry {
   closeAsync(): Promise<void>;
@@ -53,21 +55,12 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
       if (options.preparedWriteStore === undefined)
         throw new McpRequestError('Write tools require a trusted prepared-write host.');
       assertMcpJsonSchema(input, registered.tool.inputSchema, 'input');
-      const accountId = getAccountId(registered.tool, input, context);
-      const prepared = await registered.tool.prepareWriteAsync(input, context);
-      const proposal = createMcpApprovalProposalAsync({
-        accountId,
+      return await prepareRegisteredWriteAsync(
+        registered,
+        input,
         context,
-        prepared,
-        tool: registered,
-      });
-      const stored = await options.preparedWriteStore.createPreparedWriteAsync(proposal);
-      if (
-        !sameProposal(stored.proposal, proposal) ||
-        stored.snapshotFingerprint !== createMcpApprovalFingerprint(proposal)
-      )
-        throw new McpRequestError('Prepared write storage did not preserve the original proposal.');
-      return { approvalId: stored.approvalId, expiresAt: stored.expiresAt };
+        options.preparedWriteStore,
+      );
     },
     executeAsync: async (toolId, input, context) => {
       const registered = toolsById.get(toolId);
@@ -130,7 +123,12 @@ async function executeWriteAsync(
     executionClaim: claimed.executionClaim,
   };
   const writeTool = registered.tool;
-  if (!(await writeTool.verifyPreparedWriteAsync(claimed.proposal, executionContext)))
+  if (
+    !(await sanitizeMcpRequestAsync(
+      () => writeTool.verifyPreparedWriteAsync(claimed.proposal, executionContext),
+      'MCP write verification failed.',
+    ))
+  )
     throw new McpRequestError(
       'Write approval is stale because provider state no longer matches the proposal.',
     );
@@ -148,6 +146,32 @@ async function executeWriteAsync(
     executionContext,
     options.auditSink,
   );
+}
+
+/** Prepare and persist one provider proposal without disclosing provider or host failures. */
+async function prepareRegisteredWriteAsync(
+  registered: RegisteredMcpWriteTool,
+  input: Readonly<Record<string, unknown>>,
+  context: McpInvocationContext,
+  store: McpPreparedWriteStore,
+): Promise<{ readonly approvalId: string; readonly expiresAt: string }> {
+  return await sanitizeMcpRequestAsync(async () => {
+    const accountId = getAccountId(registered.tool, input, context);
+    const prepared = await registered.tool.prepareWriteAsync(input, context);
+    const proposal = createMcpApprovalProposalAsync({
+      accountId,
+      context,
+      prepared,
+      tool: registered,
+    });
+    const stored = await store.createPreparedWriteAsync(proposal);
+    if (
+      !sameProposal(stored.proposal, proposal) ||
+      stored.snapshotFingerprint !== createMcpApprovalFingerprint(proposal)
+    )
+      throw new McpRequestError('Prepared write storage did not preserve the original proposal.');
+    return { approvalId: stored.approvalId, expiresAt: stored.expiresAt };
+  }, 'MCP write preparation failed.');
 }
 
 /** Invoke a claimed provider operation once and leave a durable terminal outcome for reconciliation. */
@@ -261,13 +285,21 @@ function isRegisteredWriteTool(
   return registered?.tool.risk === 'write';
 }
 function registerTools(integrations: readonly McpIntegration[]): readonly RegisteredMcpTool[] {
-  const tools = integrations.flatMap((integration) =>
-    integration.tools.map((tool) => ({
-      integrationId: integration.id,
-      tool,
-      toolId: `${integration.id}.${tool.id}`,
-    })),
-  );
+  const integrationIds = new Set<string>();
+  const tools = integrations.flatMap((integration) => {
+    if (!isMcpToolIdentifier(integration.id) || integrationIds.has(integration.id))
+      throw new Error(`Invalid or duplicate MCP integration identifier: ${integration.id}`);
+    integrationIds.add(integration.id);
+    return integration.tools.map((tool) => {
+      if (!isMcpToolIdentifier(tool.id))
+        throw new Error(`Invalid MCP tool identifier: ${integration.id}.${tool.id}`);
+      return {
+        integrationId: integration.id,
+        tool,
+        toolId: `${integration.id}.${tool.id}`,
+      };
+    });
+  });
   if (tools.some(({ toolId }) => isReservedLifecycleToolIdentifier(toolId)))
     throw new Error('MCP tool identifier conflicts with a reserved write lifecycle suffix');
   if (new Set(tools.map(({ toolId }) => toolId)).size !== tools.length)

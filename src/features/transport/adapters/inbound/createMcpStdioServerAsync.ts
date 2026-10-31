@@ -8,6 +8,7 @@ import {
 
 import type { McpInvocationContext } from '../../../../types/public.js';
 import type { McpRegistry } from '../../../registry/application/createMcpRegistry.js';
+import { McpRequestError } from '../../../registry/application/McpRequestError.js';
 
 export interface CreateMcpStdioServerOptions {
   readonly context: McpInvocationContext;
@@ -85,7 +86,7 @@ async function callMcpToolAsync(options: CreateMcpStdioServerOptions, request: C
     return {
       content: [
         {
-          text: error instanceof Error ? error.message : 'MCP tool execution failed.',
+          text: error instanceof McpRequestError ? error.message : 'MCP tool execution failed.',
           type: 'text' as const,
         },
       ],

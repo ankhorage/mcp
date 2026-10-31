@@ -35,8 +35,50 @@ test('reserves lifecycle tool suffixes from provider tool identifiers', () => {
     scope: 'global' as const,
     title: 'Read',
   };
-  for (const id of ['write.prepare', 'write.execute'])
+  for (const id of ['prepare', 'execute'])
     expect(() =>
       createMcpRegistry({ integrations: [{ id: 'fixture', tools: [{ ...readTool, id }] }] }),
     ).toThrow('reserved write lifecycle suffix');
+});
+
+test('rejects invalid or duplicate integration and tool identifiers', () => {
+  const readTool = {
+    description: 'Read.',
+    executeAsync: () => Promise.resolve({ ok: true }),
+    inputSchema: { additionalProperties: false, type: 'object' } as const,
+    risk: 'read' as const,
+    scope: 'global' as const,
+    title: 'Read',
+  };
+  expect(() =>
+    createMcpRegistry({
+      integrations: [{ id: 'invalid.id', tools: [{ ...readTool, id: 'read' }] }],
+    }),
+  ).toThrow('Invalid or duplicate MCP integration identifier');
+  expect(() =>
+    createMcpRegistry({
+      integrations: [{ id: 'fixture', tools: [{ ...readTool, id: 'invalid.id' }] }],
+    }),
+  ).toThrow('Invalid MCP tool identifier');
+  expect(() =>
+    createMcpRegistry({
+      integrations: [
+        { id: 'fixture', tools: [{ ...readTool, id: 'read' }] },
+        { id: 'fixture', tools: [{ ...readTool, id: 'other' }] },
+      ],
+    }),
+  ).toThrow('Invalid or duplicate MCP integration identifier');
+  expect(() =>
+    createMcpRegistry({
+      integrations: [
+        {
+          id: 'fixture',
+          tools: [
+            { ...readTool, id: 'read' },
+            { ...readTool, id: 'read' },
+          ],
+        },
+      ],
+    }),
+  ).toThrow('Duplicate MCP tool identifier');
 });
