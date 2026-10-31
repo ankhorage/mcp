@@ -1,21 +1,19 @@
 import type {
-  McpApprovalVerifier,
   McpAuditSink,
   McpIntegration,
   McpInvocationContext,
+  McpPreparedWriteStore,
+  McpReadTool,
   McpTool,
   McpToolExecutionContext,
-  McpTransactionalApprovalConsumer,
+  McpWriteTool,
 } from '../../../types/public.js';
 import { assertMcpJsonSchema } from './assertMcpJsonSchema.js';
+import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
 import { createMcpApprovalProposalAsync } from './createMcpApprovalProposalAsync.js';
-import { createMcpOutcomeErrorCode } from './createMcpOutcomeErrorCode.js';
-import { denyMcpRequestAsync } from './denyMcpRequestAsync.js';
-import { isMcpToolIdentifier } from './isMcpToolIdentifier.js';
 import { McpRequestError } from './McpRequestError.js';
 import { recordMcpAuditBestEffortAsync } from './recordMcpAuditBestEffortAsync.js';
 import { recordMcpAuditRequiredAsync } from './recordMcpAuditRequiredAsync.js';
-import { registerTransactionalApprovalConsumers } from './registerTransactionalApprovalConsumers.js';
 
 export interface McpRegistry {
   closeAsync(): Promise<void>;
@@ -24,284 +22,258 @@ export interface McpRegistry {
     input: Readonly<Record<string, unknown>>,
     context: McpInvocationContext,
   ): Promise<unknown>;
+  prepareWriteAsync(
+    toolId: string,
+    input: Readonly<Record<string, unknown>>,
+    context: McpInvocationContext,
+  ): Promise<{ readonly approvalId: string; readonly expiresAt: string }>;
   listTools(): readonly RegisteredMcpTool[];
 }
-
 export type RegisteredMcpTool = Readonly<{ integrationId: string; tool: McpTool; toolId: string }>;
-
+type RegisteredMcpWriteTool = RegisteredMcpTool & { readonly tool: McpWriteTool };
 export interface CreateMcpRegistryOptions {
-  readonly approvalVerifier?: McpApprovalVerifier;
   readonly auditSink?: McpAuditSink;
   readonly integrations: readonly McpIntegration[];
-  readonly now?: () => Date;
-  readonly transactionalApprovalConsumers?: readonly McpTransactionalApprovalConsumer[];
+  readonly preparedWriteStore?: McpPreparedWriteStore;
 }
 
-/*** Create a deterministic registry that enforces account and mutation boundaries. */
+/** Create the provider-neutral runtime; write execution is impossible without a trusted host store. */
 export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistry {
   const registeredTools = registerTools(options.integrations);
   const toolsById = new Map(registeredTools.map((tool) => [tool.toolId, tool]));
-  const transactionalConsumersByToolId = registerTransactionalApprovalConsumers(
-    registeredTools,
-    options.transactionalApprovalConsumers ?? [],
-  );
   return {
     closeAsync: async () => {
       for (const integration of options.integrations) await integration.closeAsync?.();
     },
-    executeAsync: async (toolId, input, context) => {
-      const registeredTool = toolsById.get(toolId);
-      if (registeredTool === undefined)
-        return denyMcpRequestAsync({
-          accountId: null,
-          auditSink: options.auditSink,
-          context,
-          errorCode: 'unknown-tool',
-          toolId,
-        });
-      return await executeRegisteredToolAsync(
-        registeredTool,
-        toolId,
-        input,
-        context,
-        options,
-        transactionalConsumersByToolId.get(toolId),
-      );
-    },
     listTools: () => registeredTools,
+    prepareWriteAsync: async (toolId, input, context) => {
+      const registered = toolsById.get(toolId);
+      if (!isRegisteredWriteTool(registered))
+        throw new McpRequestError('MCP request denied: write-tool-not-found');
+      if (options.preparedWriteStore === undefined)
+        throw new McpRequestError('Write tools require a trusted prepared-write host.');
+      assertMcpJsonSchema(input, registered.tool.inputSchema, 'input');
+      const accountId = getAccountId(registered.tool, input, context);
+      const prepared = await registered.tool.prepareWriteAsync(input, context);
+      const proposal = createMcpApprovalProposalAsync({
+        accountId,
+        context,
+        prepared,
+        tool: registered,
+      });
+      const stored = await options.preparedWriteStore.createPreparedWriteAsync(proposal);
+      if (
+        !sameProposal(stored.proposal, proposal) ||
+        stored.snapshotFingerprint !== createMcpApprovalFingerprint(proposal)
+      )
+        throw new McpRequestError('Prepared write storage did not preserve the original proposal.');
+      return { approvalId: stored.approvalId, expiresAt: stored.expiresAt };
+    },
+    executeAsync: async (toolId, input, context) => {
+      const registered = toolsById.get(toolId);
+      if (registered === undefined) throw new McpRequestError('MCP request denied: unknown-tool');
+      if (registered.tool.risk === 'read')
+        return await executeReadAsync(
+          registered.tool,
+          registered.toolId,
+          input,
+          context,
+          options.auditSink,
+        );
+      if (isRegisteredWriteTool(registered))
+        return await executeWriteAsync(registered, input, context, options);
+      throw new McpRequestError('MCP request denied: unknown-tool');
+    },
   };
 }
 
-/*** Enforce one registered tool boundary before it reaches its provider implementation. */
-async function executeRegisteredToolAsync(
-  registeredTool: RegisteredMcpTool,
+/** Execute a read after account authorization; reads never need a host. */
+async function executeReadAsync(
+  tool: McpReadTool,
   toolId: string,
   input: Readonly<Record<string, unknown>>,
   context: McpInvocationContext,
-  options: CreateMcpRegistryOptions,
-  transactionalConsumer: McpTransactionalApprovalConsumer | undefined,
+  auditSink: McpAuditSink | undefined,
 ): Promise<unknown> {
+  assertMcpJsonSchema(input, tool.inputSchema, 'input');
+  if (tool.scope === 'account') getAccountId(tool, input, context);
   try {
-    return await executeAuthorizedToolAsync(
-      registeredTool,
+    return await tool.executeAsync(input, context);
+  } catch {
+    await recordMcpAuditBestEffortAsync(auditSink, {
+      accountId: null,
+      actorId: context.actorId,
+      errorCode: 'execution-rejected',
+      outcome: 'failed',
+      risk: 'read',
       toolId,
-      input,
-      context,
-      options,
-      transactionalConsumer,
-    );
-  } catch (error) {
-    if (!(error instanceof McpRequestError))
-      await recordMcpAuditBestEffortAsync(options.auditSink, {
-        accountId: null,
-        actorId: context.actorId,
-        errorCode: 'execution-rejected',
-        outcome: 'failed',
-        risk: registeredTool.tool.risk,
-        toolId,
-      });
-    if (error instanceof McpRequestError) throw error;
+    });
     throw new McpRequestError('MCP tool execution failed.');
   }
 }
 
-/** Authorize one registered tool and record its durable write intent before provider execution. */
-async function executeAuthorizedToolAsync(
-  registeredTool: RegisteredMcpTool,
-  toolId: string,
+/** Claim an externally approved immutable proposal once, then make at most one provider call. */
+async function executeWriteAsync(
+  registered: RegisteredMcpWriteTool,
   input: Readonly<Record<string, unknown>>,
   context: McpInvocationContext,
   options: CreateMcpRegistryOptions,
-  transactionalConsumer: McpTransactionalApprovalConsumer | undefined,
 ): Promise<unknown> {
-  assertMcpJsonSchema(input, registeredTool.tool.inputSchema, 'input');
-  const accountId = await getAuthorizedAccountId(registeredTool, input, context, options.auditSink);
-  const executionContext = await assertWriteApprovalAsync(
-    registeredTool,
+  const claimed = await claimApprovedWriteAsync(
+    registered,
     input,
     context,
-    options.approvalVerifier,
-    accountId,
-    options.now ?? (() => new Date()),
-    transactionalConsumer,
+    options.preparedWriteStore,
   );
-  if (registeredTool.tool.risk === 'write')
-    await recordMcpAuditRequiredAsync(options.auditSink, {
-      accountId,
-      actorId: context.actorId,
-      outcome: 'intent',
-      risk: 'write',
-      toolId,
-    });
-  return await executeAndAuditAsync(
-    registeredTool,
-    input,
+  const executionContext: McpToolExecutionContext = {
+    ...context,
+    executionClaim: claimed.executionClaim,
+  };
+  const writeTool = registered.tool;
+  if (!(await writeTool.verifyPreparedWriteAsync(claimed.proposal, executionContext)))
+    throw new McpRequestError(
+      'Write approval is stale because provider state no longer matches the proposal.',
+    );
+  await recordMcpAuditRequiredAsync(options.auditSink, {
+    accountId: claimed.proposal.accountId,
+    actorId: context.actorId,
+    outcome: 'intent',
+    risk: 'write',
+    toolId: registered.toolId,
+  });
+  return await executeClaimedWriteAsync(
+    writeTool,
+    registered.toolId,
+    claimed,
     executionContext,
-    accountId,
     options.auditSink,
   );
 }
 
-/*** Execute one authorized tool and durably record write outcomes without exposing provider failures. */
-async function executeAndAuditAsync(
-  registeredTool: RegisteredMcpTool,
-  input: Readonly<Record<string, unknown>>,
-  context: McpInvocationContext,
-  accountId: string | null,
+/** Invoke a claimed provider operation once and leave a durable terminal outcome for reconciliation. */
+async function executeClaimedWriteAsync(
+  writeTool: McpWriteTool,
+  toolId: string,
+  claimed: NonNullable<
+    Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>
+  >,
+  context: McpToolExecutionContext,
   auditSink: McpAuditSink | undefined,
 ): Promise<unknown> {
-  let output: unknown;
   try {
-    output = await registeredTool.tool.executeAsync(input, context);
-    if (registeredTool.tool.outputSchema !== undefined)
-      assertMcpJsonSchema(output, registeredTool.tool.outputSchema, 'output');
+    const output = await writeTool.executePreparedWriteAsync(claimed.proposal, context);
+    if (writeTool.outputSchema !== undefined)
+      assertMcpJsonSchema(output, writeTool.outputSchema, 'output');
+    await recordMcpAuditRequiredAsync(auditSink, {
+      accountId: claimed.proposal.accountId,
+      actorId: context.actorId,
+      outcome: writeTool.auditOutcome?.(output) ?? 'executed',
+      risk: 'write',
+      toolId,
+    });
+    return output;
   } catch (error) {
-    try {
-      await recordOutcomeAsync(
-        auditSink,
-        registeredTool,
-        context,
-        accountId,
-        registeredTool.tool.risk === 'write' ? 'indeterminate' : 'failed',
-      );
-    } catch {
-      throw new McpRequestError('MCP write outcome could not be durably recorded.');
-    }
+    await recordMcpAuditRequiredAsync(auditSink, {
+      accountId: claimed.proposal.accountId,
+      actorId: context.actorId,
+      outcome: 'indeterminate',
+      risk: 'write',
+      toolId,
+    });
     if (error instanceof McpRequestError) throw error;
     throw new McpRequestError('MCP tool execution failed.');
   }
-  try {
-    await recordOutcomeAsync(
-      auditSink,
-      registeredTool,
-      context,
-      accountId,
-      registeredTool.tool.auditOutcome?.(output) ?? 'executed',
-    );
-  } catch {
-    throw new McpRequestError('MCP write outcome could not be durably recorded.');
-  }
-  return output;
 }
 
-/*** Record the terminal outcome according to the read best-effort and write durable-audit policies. */
-async function recordOutcomeAsync(
-  auditSink: McpAuditSink | undefined,
-  registeredTool: RegisteredMcpTool,
-  context: McpToolExecutionContext,
-  accountId: string | null,
-  outcome: 'executed' | 'failed' | 'indeterminate',
-): Promise<void> {
-  const event = {
-    accountId,
-    actorId: context.actorId,
-    ...createMcpOutcomeErrorCode(outcome),
-    outcome,
-    risk: registeredTool.tool.risk,
-    toolId: registeredTool.toolId,
-  } as const;
-  if (registeredTool.tool.risk === 'write')
-    return await recordMcpAuditRequiredAsync(auditSink, event);
-  await recordMcpAuditBestEffortAsync(auditSink, event);
-}
-
-/*** Reject missing account identity unless a tool explicitly declares global scope. */
-async function getAuthorizedAccountId(
-  registeredTool: RegisteredMcpTool,
-  input: Readonly<Record<string, unknown>>,
-  context: McpToolExecutionContext,
-  auditSink: McpAuditSink | undefined,
-): Promise<string | null> {
-  if (registeredTool.tool.scope === 'global') return null;
-  const accountId = registeredTool.tool.accountId(input);
-  if (accountId === null)
-    return denyMcpRequestAsync({
-      accountId: null,
-      auditSink,
-      context,
-      errorCode: 'missing-account-identity',
-      toolId: registeredTool.toolId,
-    });
-  if (!context.allowedAccounts.includes(accountId))
-    return denyMcpRequestAsync({
-      accountId,
-      auditSink,
-      context,
-      errorCode: 'account-not-allowed',
-      toolId: registeredTool.toolId,
-    });
-  return accountId;
-}
-
-/*** Register valid, stable namespaced tool identifiers. */
-function registerTools(integrations: readonly McpIntegration[]): readonly RegisteredMcpTool[] {
-  const integrationIds = new Set<string>();
-  const tools = integrations.flatMap((integration) => {
-    if (!isMcpToolIdentifier(integration.id) || integrationIds.has(integration.id))
-      throw new Error(`Invalid or duplicate MCP integration identifier: ${integration.id}`);
-    integrationIds.add(integration.id);
-    return integration.tools.map((tool) => {
-      if (!isMcpToolIdentifier(tool.id))
-        throw new Error(`Invalid MCP tool identifier: ${integration.id}.${tool.id}`);
-      return { integrationId: integration.id, tool, toolId: `${integration.id}.${tool.id}` };
-    });
-  });
-  const ids = new Set<string>();
-  for (const tool of tools) {
-    if (ids.has(tool.toolId)) throw new Error(`Duplicate MCP tool identifier: ${tool.toolId}`);
-    ids.add(tool.toolId);
-  }
-  return tools.toSorted((left, right) => left.toolId.localeCompare(right.toolId));
-}
-
-/*** Require and consume an immutable, external approval before a productive mutation. */
-async function assertWriteApprovalAsync(
-  registeredTool: RegisteredMcpTool,
+/** Consume one human-approved proposal and create its durable execution intent before any provider call. */
+async function claimApprovedWriteAsync(
+  registered: RegisteredMcpWriteTool,
   input: Readonly<Record<string, unknown>>,
   context: McpInvocationContext,
-  verifier: McpApprovalVerifier | undefined,
-  accountId: string | null,
-  now: () => Date,
-  transactionalConsumer: McpTransactionalApprovalConsumer | undefined,
-): Promise<McpToolExecutionContext> {
-  if (registeredTool.tool.risk === 'read') return context;
-  if (
-    accountId === null ||
-    registeredTool.tool.describeChangeAsync === undefined ||
-    registeredTool.tool.verifyExpectedStateAsync === undefined
-  )
+  store: McpPreparedWriteStore | undefined,
+): Promise<
+  NonNullable<Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>>
+> {
+  const { approvalId } = input;
+  if (typeof approvalId !== 'string' || Object.keys(input).length !== 1)
+    throw new McpRequestError('Write execution accepts only an approvalId.');
+  if (store === undefined)
+    throw new McpRequestError('Write tools require a trusted prepared-write host.');
+  let claimed: Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>;
+  try {
+    claimed = await store.claimApprovedWriteAndCreateIntentAsync({
+      approvalId,
+      toolId: registered.toolId,
+    });
+  } catch {
     throw new McpRequestError(
-      'Write tools require an externally issued, durable approval and provider state verification.',
+      'MCP write rejected because prepared-write persistence is unavailable.',
     );
-  const change = await registeredTool.tool.describeChangeAsync(input, context);
-  if (!(await registeredTool.tool.verifyExpectedStateAsync(input, context, change)))
-    throw new McpRequestError(
-      'Write approval is stale because provider state no longer matches the proposal.',
-    );
-  const proposal = await createMcpApprovalProposalAsync({
-    accountId,
-    change,
-    context,
-    now,
-    tool: registeredTool,
-    toolInput: input,
-  });
-  if (transactionalConsumer !== undefined) {
-    const consumedApproval =
-      await transactionalConsumer.consumeApprovalAndCreateIntentAsync(proposal);
-    if (consumedApproval === null)
-      throw new McpRequestError(
-        'The supplied approval is denied, expired, replayed, or bound to another operation.',
-      );
-    return { ...context, consumedApproval };
   }
-  if (verifier === undefined)
-    throw new McpRequestError(
-      'Write tools require an externally issued, durable approval and provider state verification.',
-    );
-  if (!(await verifier.verifyAndConsumeAsync(proposal)))
+  if (
+    claimed === null ||
+    !sameStoredWrite(registered, claimed) ||
+    claimed.proposal.actorId !== context.actorId ||
+    !context.allowedAccounts.includes(claimed.proposal.accountId)
+  )
     throw new McpRequestError(
       'The supplied approval is denied, expired, replayed, or bound to another operation.',
     );
-  return context;
+  return claimed;
+}
+
+/** Enforce an account identity derived only from the provider input during preparation. */
+function getAccountId(
+  tool: McpReadTool | McpWriteTool,
+  input: Readonly<Record<string, unknown>>,
+  context: McpInvocationContext,
+): string {
+  if (tool.scope !== 'account' || tool.accountId === undefined)
+    throw new McpRequestError('MCP request denied: missing-account-identity');
+  const accountId = tool.accountId(input);
+  if (accountId === null) throw new McpRequestError('MCP request denied: missing-account-identity');
+  if (!context.allowedAccounts.includes(accountId))
+    throw new McpRequestError('MCP request denied: account-not-allowed');
+  return accountId;
+}
+function sameProposal(left: unknown, right: unknown): boolean {
+  return createMcpApprovalFingerprint(left) === createMcpApprovalFingerprint(right);
+}
+function sameStoredWrite(
+  registered: RegisteredMcpWriteTool,
+  claimed: Awaited<ReturnType<McpPreparedWriteStore['claimApprovedWriteAndCreateIntentAsync']>>,
+): claimed is NonNullable<typeof claimed> {
+  return (
+    claimed !== null &&
+    claimed.proposal.toolId === registered.toolId &&
+    claimed.proposal.operation.length > 0 &&
+    claimed.proposal.change.resourceId.length > 0 &&
+    claimed.snapshotFingerprint === createMcpApprovalFingerprint(claimed.proposal)
+  );
+}
+
+/** Narrow a registered descriptor at the discriminated provider tool boundary. */
+function isRegisteredWriteTool(
+  registered: RegisteredMcpTool | undefined,
+): registered is RegisteredMcpWriteTool {
+  return registered?.tool.risk === 'write';
+}
+function registerTools(integrations: readonly McpIntegration[]): readonly RegisteredMcpTool[] {
+  const tools = integrations.flatMap((integration) =>
+    integration.tools.map((tool) => ({
+      integrationId: integration.id,
+      tool,
+      toolId: `${integration.id}.${tool.id}`,
+    })),
+  );
+  if (tools.some(({ toolId }) => isReservedLifecycleToolIdentifier(toolId)))
+    throw new Error('MCP tool identifier conflicts with a reserved write lifecycle suffix');
+  if (new Set(tools.map(({ toolId }) => toolId)).size !== tools.length)
+    throw new Error('Duplicate MCP tool identifier');
+  return tools.toSorted((a, b) => a.toolId.localeCompare(b.toolId));
+}
+
+/** Reserve protocol-owned suffixes so a provider cannot shadow a write lifecycle tool. */
+function isReservedLifecycleToolIdentifier(toolId: string): boolean {
+  return toolId.endsWith('.prepare') || toolId.endsWith('.execute');
 }

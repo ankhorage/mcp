@@ -46,9 +46,8 @@ function isMcpHost(value: unknown): value is McpHost {
   const host = value as McpHost;
   return (
     isMcpInvocationContext(host.context) &&
-    isMcpApprovalVerifier(host.approvalVerifier) &&
     isMcpAuditSink(host.auditSink) &&
-    isMcpTransactionalApprovalConsumers(host.transactionalApprovalConsumers)
+    isMcpPreparedWriteStore(host.preparedWriteStore)
   );
 }
 
@@ -64,17 +63,6 @@ function isMcpInvocationContext(value: unknown): boolean {
   );
 }
 
-/** Verify the optional approval dependency without invoking untrusted host properties. */
-function isMcpApprovalVerifier(value: unknown): boolean {
-  if (value === undefined) return true;
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as { readonly verifyAndConsumeAsync?: unknown }).verifyAndConsumeAsync ===
-      'function'
-  );
-}
-
 /** Verify the optional durable audit dependency without invoking untrusted host properties. */
 function isMcpAuditSink(value: unknown): boolean {
   if (value === undefined) return true;
@@ -85,38 +73,18 @@ function isMcpAuditSink(value: unknown): boolean {
   );
 }
 
-/** Require a well-formed, unique full tool identifier for every host transactional binding. */
-function isMcpTransactionalApprovalConsumers(value: unknown): boolean {
+/** Verify the host-owned prepared-write capability without invoking untrusted host methods. */
+function isMcpPreparedWriteStore(value: unknown): boolean {
   if (value === undefined) return true;
-  if (!Array.isArray(value)) return false;
-  const toolIds: string[] = [];
-  for (const consumer of value) {
-    if (!isMcpTransactionalApprovalConsumer(consumer)) return false;
-    toolIds.push(...consumer.toolIds);
-  }
-  return new Set(toolIds).size === toolIds.length;
-}
-
-/** Check the shape of a host-owned transactional approval consumer. */
-function isMcpTransactionalApprovalConsumer(value: unknown): value is {
-  readonly consumeApprovalAndCreateIntentAsync: unknown;
-  readonly toolIds: readonly string[];
-} {
   if (typeof value !== 'object' || value === null) return false;
-  const consumer = value as {
-    readonly consumeApprovalAndCreateIntentAsync?: unknown;
-    readonly toolIds?: unknown;
+  const store = value as {
+    readonly createPreparedWriteAsync?: unknown;
+    readonly claimApprovedWriteAndCreateIntentAsync?: unknown;
   };
   return (
-    Array.isArray(consumer.toolIds) &&
-    consumer.toolIds.every(isMcpFullToolIdentifier) &&
-    typeof consumer.consumeApprovalAndCreateIntentAsync === 'function'
+    typeof store.createPreparedWriteAsync === 'function' &&
+    typeof store.claimApprovedWriteAndCreateIntentAsync === 'function'
   );
-}
-
-/** Restrict host bindings to complete provider-qualified MCP tool identifiers. */
-function isMcpFullToolIdentifier(value: unknown): value is string {
-  return typeof value === 'string' && /^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/.test(value);
 }
 
 /*** Check the sole public factory expected from the trusted local host module. */
