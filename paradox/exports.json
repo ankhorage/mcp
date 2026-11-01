@@ -2,7 +2,7 @@
   {
     "name": "createMcpRegistry",
     "title": null,
-    "description": "Create a deterministic registry that enforces account and mutation boundaries.",
+    "description": null,
     "isReadme": false,
     "see": [],
     "security": [],
@@ -10,7 +10,7 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 41,
+      "line": 42,
       "column": 1
     },
     "exportPaths": [
@@ -48,7 +48,7 @@
     "modulePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
     "sourceLocation": {
       "filePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
-      "line": 21,
+      "line": 19,
       "column": 1
     },
     "exportPaths": [
@@ -86,28 +86,20 @@
     "modulePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
     "sourceLocation": {
       "filePath": "src/features/transport/composition/createMcpStdioServerAsync.ts",
-      "line": 11,
+      "line": 10,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
     "relatedSymbols": [
-      "McpApprovalVerifier",
       "McpAuditSink",
       "McpIntegration",
       "McpInvocationContext",
-      "McpTransactionalApprovalConsumer"
+      "McpPreparedWriteStore"
     ],
     "signatures": [],
     "members": [
-      {
-        "name": "approvalVerifier",
-        "kind": "property",
-        "type": "McpApprovalVerifier",
-        "required": false,
-        "description": null
-      },
       {
         "name": "auditSink",
         "kind": "property",
@@ -130,9 +122,9 @@
         "description": null
       },
       {
-        "name": "transactionalApprovalConsumers",
+        "name": "preparedWriteStore",
         "kind": "property",
-        "type": "readonly McpTransactionalApprovalConsumer[]",
+        "type": "McpPreparedWriteStore",
         "required": false,
         "description": null
       },
@@ -261,296 +253,25 @@
     "structuredRows": []
   },
   {
-    "name": "McpAccountScopedTool",
-    "title": null,
-    "description": null,
-    "isReadme": false,
-    "see": [],
-    "security": [],
-    "kind": "type",
-    "modulePath": "src/types/public.ts",
-    "sourceLocation": {
-      "filePath": "src/types/public.ts",
-      "line": 61,
-      "column": 1
-    },
-    "exportPaths": [
-      "src/index.ts"
-    ],
-    "relatedSymbols": [
-      "McpChangeDescriptor",
-      "McpExecutionAuditOutcome",
-      "McpJsonSchema",
-      "McpRisk",
-      "McpToolExecutionContext"
-    ],
-    "signatures": [],
-    "members": [
-      {
-        "name": "accountId",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>) => string | null",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "approvalFingerprintAsync",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<string>",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "auditOutcome",
-        "kind": "method",
-        "type": "(output: unknown) => McpExecutionAuditOutcome",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "describeChangeAsync",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<McpChangeDescriptor>",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "description",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "executeAsync",
-        "kind": "property",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "id",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "inputSchema",
-        "kind": "property",
-        "type": "McpJsonSchema",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "outputSchema",
-        "kind": "property",
-        "type": "McpJsonSchema",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "risk",
-        "kind": "property",
-        "type": "McpRisk",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "scope",
-        "kind": "property",
-        "type": "\"account\"",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "title",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "verifyExpectedStateAsync",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<boolean>",
-        "required": false,
-        "description": null
-      }
-    ],
-    "structuredRows": []
-  },
-  {
-    "name": "McpApprovalProposal",
-    "title": null,
-    "description": null,
-    "isReadme": false,
-    "see": [],
-    "security": [],
-    "kind": "type",
-    "modulePath": "src/types/public.ts",
-    "sourceLocation": {
-      "filePath": "src/types/public.ts",
-      "line": 83,
-      "column": 1
-    },
-    "exportPaths": [
-      "src/index.ts"
-    ],
-    "relatedSymbols": [
-      "McpChangeDescriptor"
-    ],
-    "signatures": [],
-    "members": [
-      {
-        "name": "accountId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "actorId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "change",
-        "kind": "property",
-        "type": "McpChangeDescriptor",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "expiresAt",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "fingerprint",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "operation",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "toolId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      }
-    ],
-    "structuredRows": []
-  },
-  {
-    "name": "McpApprovalVerifier",
-    "title": null,
-    "description": null,
-    "isReadme": false,
-    "see": [],
-    "security": [],
-    "kind": "type",
-    "modulePath": "src/types/public.ts",
-    "sourceLocation": {
-      "filePath": "src/types/public.ts",
-      "line": 93,
-      "column": 1
-    },
-    "exportPaths": [
-      "src/index.ts"
-    ],
-    "relatedSymbols": [
-      "McpApprovalProposal"
-    ],
-    "signatures": [],
-    "members": [
-      {
-        "name": "verifyAndConsumeAsync",
-        "kind": "method",
-        "type": "(proposal: McpApprovalProposal) => Promise<boolean>",
-        "required": true,
-        "description": null
-      }
-    ],
-    "structuredRows": []
-  },
-  {
     "name": "McpAuditEvent",
     "title": null,
     "description": null,
     "isReadme": false,
     "see": [],
     "security": [],
-    "kind": "type",
+    "kind": "unknown",
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 105,
+      "line": 153,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
-    "relatedSymbols": [
-      "McpRisk"
-    ],
+    "relatedSymbols": [],
     "signatures": [],
-    "members": [
-      {
-        "name": "accountId",
-        "kind": "property",
-        "type": "string | null",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "actorId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "errorCode",
-        "kind": "property",
-        "type": "string",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "outcome",
-        "kind": "property",
-        "type": "\"executed\" | \"indeterminate\" | \"denied\" | \"failed\" | \"intent\"",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "risk",
-        "kind": "property",
-        "type": "McpRisk",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "toolId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      }
-    ],
+    "members": [],
     "structuredRows": []
   },
   {
@@ -564,7 +285,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 114,
+      "line": 154,
       "column": 1
     },
     "exportPaths": [
@@ -596,7 +317,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 27,
+      "line": 26,
       "column": 1
     },
     "exportPaths": [
@@ -630,36 +351,6 @@
     "structuredRows": []
   },
   {
-    "name": "McpConsumedApproval",
-    "title": null,
-    "description": null,
-    "isReadme": false,
-    "see": [],
-    "security": [],
-    "kind": "type",
-    "modulePath": "src/types/public.ts",
-    "sourceLocation": {
-      "filePath": "src/types/public.ts",
-      "line": 16,
-      "column": 1
-    },
-    "exportPaths": [
-      "src/index.ts"
-    ],
-    "relatedSymbols": [],
-    "signatures": [],
-    "members": [
-      {
-        "name": "approvalId",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      }
-    ],
-    "structuredRows": []
-  },
-  {
     "name": "McpExecutionAuditOutcome",
     "title": null,
     "description": null,
@@ -682,7 +373,7 @@
     "structuredRows": []
   },
   {
-    "name": "McpGlobalTool",
+    "name": "McpExecutionClaim",
     "title": null,
     "description": null,
     "isReadme": false,
@@ -692,103 +383,27 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 66,
+      "line": 12,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
-    "relatedSymbols": [
-      "McpChangeDescriptor",
-      "McpExecutionAuditOutcome",
-      "McpJsonSchema",
-      "McpRisk",
-      "McpToolExecutionContext"
-    ],
+    "relatedSymbols": [],
     "signatures": [],
     "members": [
       {
-        "name": "approvalFingerprintAsync",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<string>",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "auditOutcome",
-        "kind": "method",
-        "type": "(output: unknown) => McpExecutionAuditOutcome",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "describeChangeAsync",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<McpChangeDescriptor>",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "description",
+        "name": "approvalId",
         "kind": "property",
         "type": "string",
         "required": true,
         "description": null
       },
       {
-        "name": "executeAsync",
-        "kind": "property",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "id",
+        "name": "intentId",
         "kind": "property",
         "type": "string",
         "required": true,
-        "description": null
-      },
-      {
-        "name": "inputSchema",
-        "kind": "property",
-        "type": "McpJsonSchema",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "outputSchema",
-        "kind": "property",
-        "type": "McpJsonSchema",
-        "required": false,
-        "description": null
-      },
-      {
-        "name": "risk",
-        "kind": "property",
-        "type": "McpRisk",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "scope",
-        "kind": "property",
-        "type": "\"global\"",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "title",
-        "kind": "property",
-        "type": "string",
-        "required": true,
-        "description": null
-      },
-      {
-        "name": "verifyExpectedStateAsync",
-        "kind": "method",
-        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext, change: McpChangeDescriptor) => Promise<boolean>",
-        "required": false,
         "description": null
       }
     ],
@@ -805,27 +420,19 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 119,
+      "line": 157,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
     "relatedSymbols": [
-      "McpApprovalVerifier",
       "McpAuditSink",
       "McpInvocationContext",
-      "McpTransactionalApprovalConsumer"
+      "McpPreparedWriteStore"
     ],
     "signatures": [],
     "members": [
-      {
-        "name": "approvalVerifier",
-        "kind": "property",
-        "type": "McpApprovalVerifier",
-        "required": false,
-        "description": null
-      },
       {
         "name": "auditSink",
         "kind": "property",
@@ -841,9 +448,9 @@
         "description": null
       },
       {
-        "name": "transactionalApprovalConsumers",
+        "name": "preparedWriteStore",
         "kind": "property",
-        "type": "readonly McpTransactionalApprovalConsumer[]",
+        "type": "McpPreparedWriteStore",
         "required": false,
         "description": null
       }
@@ -861,7 +468,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 126,
+      "line": 162,
       "column": 1
     },
     "exportPaths": [
@@ -893,7 +500,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 72,
+      "line": 114,
       "column": 1
     },
     "exportPaths": [
@@ -939,7 +546,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 78,
+      "line": 119,
       "column": 1
     },
     "exportPaths": [
@@ -978,7 +585,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 10,
+      "line": 8,
       "column": 1
     },
     "exportPaths": [
@@ -1015,7 +622,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 3,
+      "line": 2,
       "column": 1
     },
     "exportPaths": [
@@ -1056,6 +663,466 @@
     "structuredRows": []
   },
   {
+    "name": "McpPreparedWrite",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 46,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpChangeDescriptor",
+      "McpPreparedWritePayload"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "change",
+        "kind": "property",
+        "type": "McpChangeDescriptor",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "createdAt",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "fingerprint",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "operation",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "payload",
+        "kind": "property",
+        "type": "McpPreparedWritePayload",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpPreparedWritePayload",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 31,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [],
+    "signatures": [],
+    "members": [
+      {
+        "name": "serialized",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "version",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpPreparedWriteProposal",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 36,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpChangeDescriptor",
+      "McpPreparedWritePayload"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "accountId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "actorId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "change",
+        "kind": "property",
+        "type": "McpChangeDescriptor",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "createdAt",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "fingerprint",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "operation",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "payload",
+        "kind": "property",
+        "type": "McpPreparedWritePayload",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "toolId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpPreparedWriteSettlement",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 17,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpExecutionClaim",
+      "McpPreparedWriteSettlementOutcome"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "executionClaim",
+        "kind": "property",
+        "type": "McpExecutionClaim",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "outcome",
+        "kind": "property",
+        "type": "McpPreparedWriteSettlementOutcome",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "reasonCode",
+        "kind": "property",
+        "type": "string",
+        "required": false,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpPreparedWriteSettlementOutcome",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "unknown",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 16,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [],
+    "signatures": [],
+    "members": [],
+    "structuredRows": []
+  },
+  {
+    "name": "McpPreparedWriteStore",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 60,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpExecutionClaim",
+      "McpPreparedWriteProposal",
+      "McpPreparedWriteSettlement",
+      "McpPreparedWriteSettlementOutcome",
+      "McpStoredPreparedWrite"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "claimApprovedWriteAndCreateIntentAsync",
+        "kind": "method",
+        "type": "(input: { readonly approvalId: string; readonly actorId: string; readonly allowedAccounts: readonly string[]; readonly toolId: string; }) => Promise<(McpStoredPreparedWrite & { readonly executionClaim: McpExecutionClaim; }) | null>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "createPreparedWriteAsync",
+        "kind": "method",
+        "type": "(proposal: McpPreparedWriteProposal) => Promise<McpStoredPreparedWrite>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "reconcilePreparedWriteAsync",
+        "kind": "method",
+        "type": "(executionClaim: McpExecutionClaim) => Promise<{ readonly outcome: McpPreparedWriteSettlementOutcome | \"executing\"; }>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "settlePreparedWriteAsync",
+        "kind": "method",
+        "type": "(settlement: McpPreparedWriteSettlement) => Promise<void>",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpReadAuditEvent",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 123,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [],
+    "signatures": [],
+    "members": [
+      {
+        "name": "accountId",
+        "kind": "property",
+        "type": "string | null",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "actorId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "errorCode",
+        "kind": "property",
+        "type": "string",
+        "required": false,
+        "description": null
+      },
+      {
+        "name": "outcome",
+        "kind": "property",
+        "type": "\"denied\" | \"failed\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "risk",
+        "kind": "property",
+        "type": "\"read\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "toolId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpReadTool",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 84,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpJsonSchema",
+      "McpToolExecutionContext"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "accountId",
+        "kind": "method",
+        "type": "(input: Readonly<Record<string, unknown>>) => string | null",
+        "required": false,
+        "description": null
+      },
+      {
+        "name": "description",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "executeAsync",
+        "kind": "property",
+        "type": "(input: Readonly<Record<string, unknown>>, context: McpToolExecutionContext) => Promise<unknown>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "id",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "inputSchema",
+        "kind": "property",
+        "type": "McpJsonSchema",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "outputSchema",
+        "kind": "property",
+        "type": "McpJsonSchema",
+        "required": false,
+        "description": null
+      },
+      {
+        "name": "risk",
+        "kind": "property",
+        "type": "\"read\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "scope",
+        "kind": "property",
+        "type": "\"account\" | \"global\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "title",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
     "name": "McpRegistry",
     "title": null,
     "description": null,
@@ -1066,7 +1133,7 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 20,
+      "line": 19,
       "column": 1
     },
     "exportPaths": [
@@ -1098,6 +1165,13 @@
         "type": "() => readonly RegisteredMcpTool[]",
         "required": true,
         "description": null
+      },
+      {
+        "name": "prepareWriteAsync",
+        "kind": "method",
+        "type": "(toolId: string, input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<{ readonly approvalId: string; readonly expiresAt: string; }>",
+        "required": true,
+        "description": null
       }
     ],
     "structuredRows": []
@@ -1125,6 +1199,59 @@
     "structuredRows": []
   },
   {
+    "name": "McpStoredPreparedWrite",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 53,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpPreparedWriteProposal"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "approvalId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "expiresAt",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "proposal",
+        "kind": "property",
+        "type": "McpPreparedWriteProposal",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "snapshotFingerprint",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
     "name": "McpTool",
     "title": null,
     "description": null,
@@ -1135,7 +1262,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 70,
+      "line": 113,
       "column": 1
     },
     "exportPaths": [
@@ -1157,14 +1284,14 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 21,
+      "line": 22,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
     "relatedSymbols": [
-      "McpConsumedApproval"
+      "McpExecutionClaim"
     ],
     "signatures": [],
     "members": [
@@ -1183,9 +1310,9 @@
         "description": null
       },
       {
-        "name": "consumedApproval",
+        "name": "executionClaim",
         "kind": "property",
-        "type": "McpConsumedApproval",
+        "type": "McpExecutionClaim",
         "required": false,
         "description": null
       }
@@ -1193,7 +1320,7 @@
     "structuredRows": []
   },
   {
-    "name": "McpTransactionalApprovalConsumer",
+    "name": "McpWriteAuditEvent",
     "title": null,
     "description": null,
     "isReadme": false,
@@ -1203,29 +1330,234 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 98,
+      "line": 138,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
     "relatedSymbols": [
-      "McpApprovalProposal",
-      "McpConsumedApproval"
+      "McpWriteAuditOutcome"
     ],
     "signatures": [],
     "members": [
       {
-        "name": "consumeApprovalAndCreateIntentAsync",
-        "kind": "method",
-        "type": "(proposal: McpApprovalProposal) => Promise<McpConsumedApproval | null>",
+        "name": "accountId",
+        "kind": "property",
+        "type": "string",
         "required": true,
         "description": null
       },
       {
-        "name": "toolIds",
+        "name": "actorId",
         "kind": "property",
-        "type": "readonly string[]",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "approvalId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "eventId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "intentId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "operation",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "outcome",
+        "kind": "property",
+        "type": "McpWriteAuditOutcome",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "providerProposalFingerprint",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "reasonCode",
+        "kind": "property",
+        "type": "string",
+        "required": false,
+        "description": null
+      },
+      {
+        "name": "risk",
+        "kind": "property",
+        "type": "\"write\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "snapshotFingerprint",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "toolId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpWriteAuditOutcome",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "unknown",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 131,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [],
+    "signatures": [],
+    "members": [],
+    "structuredRows": []
+  },
+  {
+    "name": "McpWriteTool",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 94,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpExecutionAuditOutcome",
+      "McpInvocationContext",
+      "McpJsonSchema",
+      "McpPreparedWrite",
+      "McpPreparedWriteProposal",
+      "McpToolExecutionContext"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "accountId",
+        "kind": "method",
+        "type": "(input: Readonly<Record<string, unknown>>) => string | null",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "auditOutcome",
+        "kind": "method",
+        "type": "(output: unknown) => McpExecutionAuditOutcome",
+        "required": false,
+        "description": null
+      },
+      {
+        "name": "description",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "executePreparedWriteAsync",
+        "kind": "method",
+        "type": "(proposal: McpPreparedWriteProposal, context: McpToolExecutionContext) => Promise<unknown>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "id",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "inputSchema",
+        "kind": "property",
+        "type": "McpJsonSchema",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "outputSchema",
+        "kind": "property",
+        "type": "McpJsonSchema",
+        "required": false,
+        "description": null
+      },
+      {
+        "name": "prepareWriteAsync",
+        "kind": "method",
+        "type": "(input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<McpPreparedWrite>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "risk",
+        "kind": "property",
+        "type": "\"write\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "scope",
+        "kind": "property",
+        "type": "\"account\"",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "title",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "verifyPreparedWriteAsync",
+        "kind": "method",
+        "type": "(proposal: McpPreparedWriteProposal, context: McpToolExecutionContext) => Promise<boolean>",
         "required": true,
         "description": null
       }
@@ -1243,7 +1575,7 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 30,
+      "line": 33,
       "column": 1
     },
     "exportPaths": [

@@ -8,27 +8,30 @@ graph LR
   module_src_features_config_application_readMcpConfigurationAsync_ts["src/features/config/application/readMcpConfigurationAsync.ts"]
   module_src_features_discovery_application_discoverMcpIntegrationsAsync_test_ts["src/features/discovery/application/discoverMcpIntegrationsAsync.test.ts"]
   module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts["src/features/discovery/application/discoverMcpIntegrationsAsync.ts"]
-  module_src_features_host_application_loadMcpHostAsync_test_ts["src/features/host/application/loadMcpHostAsync.test.ts"]
   module_src_features_host_application_loadMcpHostAsync_ts["src/features/host/application/loadMcpHostAsync.ts"]
   module_src_features_registry_application_assertMcpJsonSchema_ts["src/features/registry/application/assertMcpJsonSchema.ts"]
+  module_src_features_registry_application_claimMcpApprovedWriteAsync_ts["src/features/registry/application/claimMcpApprovedWriteAsync.ts"]
   module_src_features_registry_application_createMcpApprovalFingerprint_ts["src/features/registry/application/createMcpApprovalFingerprint.ts"]
   module_src_features_registry_application_createMcpApprovalProposalAsync_ts["src/features/registry/application/createMcpApprovalProposalAsync.ts"]
-  module_src_features_registry_application_createMcpOutcomeErrorCode_ts["src/features/registry/application/createMcpOutcomeErrorCode.ts"]
-  module_src_features_registry_application_createMcpRegistry_test_ts["src/features/registry/application/createMcpRegistry.test.ts"]
   module_src_features_registry_application_createMcpRegistry_ts["src/features/registry/application/createMcpRegistry.ts"]
-  module_src_features_registry_application_denyMcpRequestAsync_ts["src/features/registry/application/denyMcpRequestAsync.ts"]
+  module_src_features_registry_application_createMcpWriteAuditEvent_ts["src/features/registry/application/createMcpWriteAuditEvent.ts"]
+  module_src_features_registry_application_executeMcpClaimedWriteAsync_ts["src/features/registry/application/executeMcpClaimedWriteAsync.ts"]
   module_src_features_registry_application_isMcpToolIdentifier_ts["src/features/registry/application/isMcpToolIdentifier.ts"]
-  module_src_features_registry_application_mcpAuditOutcome_test_ts["src/features/registry/application/mcpAuditOutcome.test.ts"]
   module_src_features_registry_application_McpRequestError_ts["src/features/registry/application/McpRequestError.ts"]
+  module_src_features_registry_application_preparedWriteLifecycle_test_ts["src/features/registry/application/preparedWriteLifecycle.test.ts"]
+  module_src_features_registry_application_preparedWriteLifecycleHostBoundary_test_ts["src/features/registry/application/preparedWriteLifecycleHostBoundary.test.ts"]
+  module_src_features_registry_application_preparedWriteLifecycleSecurity_test_ts["src/features/registry/application/preparedWriteLifecycleSecurity.test.ts"]
+  module_src_features_registry_application_preparedWriteLifecycleSecurityFixture_ts["src/features/registry/application/preparedWriteLifecycleSecurityFixture.ts"]
+  module_src_features_registry_application_prepareMcpWriteAsync_ts["src/features/registry/application/prepareMcpWriteAsync.ts"]
   module_src_features_registry_application_recordMcpAuditBestEffortAsync_ts["src/features/registry/application/recordMcpAuditBestEffortAsync.ts"]
   module_src_features_registry_application_recordMcpAuditRequiredAsync_ts["src/features/registry/application/recordMcpAuditRequiredAsync.ts"]
-  module_src_features_registry_application_registerTransactionalApprovalConsumers_ts["src/features/registry/application/registerTransactionalApprovalConsumers.ts"]
-  module_src_features_registry_application_transactionalApprovalConsumer_test_ts["src/features/registry/application/transactionalApprovalConsumer.test.ts"]
+  module_src_features_registry_application_sanitizeMcpRequestAsync_ts["src/features/registry/application/sanitizeMcpRequestAsync.ts"]
   module_src_features_transport_adapters_inbound_createMcpStdioServerAsync_ts["src/features/transport/adapters/inbound/createMcpStdioServerAsync.ts"]
   module_src_features_transport_composition_createMcpStdioServerAsync_ts["src/features/transport/composition/createMcpStdioServerAsync.ts"]
   module_src_index_ts["src/index.ts"]
   module_src_standalone_test_ts["src/standalone.test.ts"]
   module_src_types_config_ts["src/types/config.ts"]
+  module_src_types_preparedWrite_ts["src/types/preparedWrite.ts"]
   module_src_types_public_ts["src/types/public.ts"]
   export_createMcpRegistry["createMcpRegistry"]
   module_src_features_registry_application_createMcpRegistry_ts --> export_createMcpRegistry
@@ -38,11 +41,10 @@ graph LR
   export_createMcpStdioServerAsync -.-> export_CreateMcpStdioServerOptions
   export_CreateMcpStdioServerOptions["CreateMcpStdioServerOptions"]
   module_src_features_transport_composition_createMcpStdioServerAsync_ts --> export_CreateMcpStdioServerOptions
-  export_CreateMcpStdioServerOptions -.-> export_McpApprovalVerifier
   export_CreateMcpStdioServerOptions -.-> export_McpAuditSink
   export_CreateMcpStdioServerOptions -.-> export_McpIntegration
   export_CreateMcpStdioServerOptions -.-> export_McpInvocationContext
-  export_CreateMcpStdioServerOptions -.-> export_McpTransactionalApprovalConsumer
+  export_CreateMcpStdioServerOptions -.-> export_McpPreparedWriteStore
   export_discoverMcpIntegrationsAsync["discoverMcpIntegrationsAsync"]
   module_src_features_discovery_application_discoverMcpIntegrationsAsync_ts --> export_discoverMcpIntegrationsAsync
   export_discoverMcpIntegrationsAsync -.-> export_DiscoverMcpIntegrationsOptions
@@ -52,44 +54,22 @@ graph LR
   export_loadMcpHostAsync["loadMcpHostAsync"]
   module_src_features_host_application_loadMcpHostAsync_ts --> export_loadMcpHostAsync
   export_loadMcpHostAsync -.-> export_McpHost
-  export_McpAccountScopedTool["McpAccountScopedTool"]
-  module_src_types_public_ts --> export_McpAccountScopedTool
-  export_McpAccountScopedTool -.-> export_McpChangeDescriptor
-  export_McpAccountScopedTool -.-> export_McpExecutionAuditOutcome
-  export_McpAccountScopedTool -.-> export_McpJsonSchema
-  export_McpAccountScopedTool -.-> export_McpRisk
-  export_McpAccountScopedTool -.-> export_McpToolExecutionContext
-  export_McpApprovalProposal["McpApprovalProposal"]
-  module_src_types_public_ts --> export_McpApprovalProposal
-  export_McpApprovalProposal -.-> export_McpChangeDescriptor
-  export_McpApprovalVerifier["McpApprovalVerifier"]
-  module_src_types_public_ts --> export_McpApprovalVerifier
-  export_McpApprovalVerifier -.-> export_McpApprovalProposal
   export_McpAuditEvent["McpAuditEvent"]
   module_src_types_public_ts --> export_McpAuditEvent
-  export_McpAuditEvent -.-> export_McpRisk
   export_McpAuditSink["McpAuditSink"]
   module_src_types_public_ts --> export_McpAuditSink
   export_McpAuditSink -.-> export_McpAuditEvent
   export_McpChangeDescriptor["McpChangeDescriptor"]
   module_src_types_public_ts --> export_McpChangeDescriptor
-  export_McpConsumedApproval["McpConsumedApproval"]
-  module_src_types_public_ts --> export_McpConsumedApproval
   export_McpExecutionAuditOutcome["McpExecutionAuditOutcome"]
   module_src_types_public_ts --> export_McpExecutionAuditOutcome
-  export_McpGlobalTool["McpGlobalTool"]
-  module_src_types_public_ts --> export_McpGlobalTool
-  export_McpGlobalTool -.-> export_McpChangeDescriptor
-  export_McpGlobalTool -.-> export_McpExecutionAuditOutcome
-  export_McpGlobalTool -.-> export_McpJsonSchema
-  export_McpGlobalTool -.-> export_McpRisk
-  export_McpGlobalTool -.-> export_McpToolExecutionContext
+  export_McpExecutionClaim["McpExecutionClaim"]
+  module_src_types_public_ts --> export_McpExecutionClaim
   export_McpHost["McpHost"]
   module_src_types_public_ts --> export_McpHost
-  export_McpHost -.-> export_McpApprovalVerifier
   export_McpHost -.-> export_McpAuditSink
   export_McpHost -.-> export_McpInvocationContext
-  export_McpHost -.-> export_McpTransactionalApprovalConsumer
+  export_McpHost -.-> export_McpPreparedWriteStore
   export_McpHostModule["McpHostModule"]
   module_src_types_public_ts --> export_McpHostModule
   export_McpHostModule -.-> export_McpHost
@@ -103,20 +83,61 @@ graph LR
   module_src_types_public_ts --> export_McpInvocationContext
   export_McpJsonSchema["McpJsonSchema"]
   module_src_types_public_ts --> export_McpJsonSchema
+  export_McpPreparedWrite["McpPreparedWrite"]
+  module_src_types_public_ts --> export_McpPreparedWrite
+  export_McpPreparedWrite -.-> export_McpChangeDescriptor
+  export_McpPreparedWrite -.-> export_McpPreparedWritePayload
+  export_McpPreparedWritePayload["McpPreparedWritePayload"]
+  module_src_types_public_ts --> export_McpPreparedWritePayload
+  export_McpPreparedWriteProposal["McpPreparedWriteProposal"]
+  module_src_types_public_ts --> export_McpPreparedWriteProposal
+  export_McpPreparedWriteProposal -.-> export_McpChangeDescriptor
+  export_McpPreparedWriteProposal -.-> export_McpPreparedWritePayload
+  export_McpPreparedWriteSettlement["McpPreparedWriteSettlement"]
+  module_src_types_public_ts --> export_McpPreparedWriteSettlement
+  export_McpPreparedWriteSettlement -.-> export_McpExecutionClaim
+  export_McpPreparedWriteSettlement -.-> export_McpPreparedWriteSettlementOutcome
+  export_McpPreparedWriteSettlementOutcome["McpPreparedWriteSettlementOutcome"]
+  module_src_types_public_ts --> export_McpPreparedWriteSettlementOutcome
+  export_McpPreparedWriteStore["McpPreparedWriteStore"]
+  module_src_types_public_ts --> export_McpPreparedWriteStore
+  export_McpPreparedWriteStore -.-> export_McpExecutionClaim
+  export_McpPreparedWriteStore -.-> export_McpPreparedWriteProposal
+  export_McpPreparedWriteStore -.-> export_McpPreparedWriteSettlement
+  export_McpPreparedWriteStore -.-> export_McpPreparedWriteSettlementOutcome
+  export_McpPreparedWriteStore -.-> export_McpStoredPreparedWrite
+  export_McpReadAuditEvent["McpReadAuditEvent"]
+  module_src_types_public_ts --> export_McpReadAuditEvent
+  export_McpReadTool["McpReadTool"]
+  module_src_types_public_ts --> export_McpReadTool
+  export_McpReadTool -.-> export_McpJsonSchema
+  export_McpReadTool -.-> export_McpToolExecutionContext
   export_McpRegistry["McpRegistry"]
   module_src_features_registry_application_createMcpRegistry_ts --> export_McpRegistry
   export_McpRegistry -.-> export_McpInvocationContext
   export_McpRegistry -.-> export_RegisteredMcpTool
   export_McpRisk["McpRisk"]
   module_src_types_public_ts --> export_McpRisk
+  export_McpStoredPreparedWrite["McpStoredPreparedWrite"]
+  module_src_types_public_ts --> export_McpStoredPreparedWrite
+  export_McpStoredPreparedWrite -.-> export_McpPreparedWriteProposal
   export_McpTool["McpTool"]
   module_src_types_public_ts --> export_McpTool
   export_McpToolExecutionContext["McpToolExecutionContext"]
   module_src_types_public_ts --> export_McpToolExecutionContext
-  export_McpToolExecutionContext -.-> export_McpConsumedApproval
-  export_McpTransactionalApprovalConsumer["McpTransactionalApprovalConsumer"]
-  module_src_types_public_ts --> export_McpTransactionalApprovalConsumer
-  export_McpTransactionalApprovalConsumer -.-> export_McpApprovalProposal
-  export_McpTransactionalApprovalConsumer -.-> export_McpConsumedApproval
+  export_McpToolExecutionContext -.-> export_McpExecutionClaim
+  export_McpWriteAuditEvent["McpWriteAuditEvent"]
+  module_src_types_public_ts --> export_McpWriteAuditEvent
+  export_McpWriteAuditEvent -.-> export_McpWriteAuditOutcome
+  export_McpWriteAuditOutcome["McpWriteAuditOutcome"]
+  module_src_types_public_ts --> export_McpWriteAuditOutcome
+  export_McpWriteTool["McpWriteTool"]
+  module_src_types_public_ts --> export_McpWriteTool
+  export_McpWriteTool -.-> export_McpExecutionAuditOutcome
+  export_McpWriteTool -.-> export_McpInvocationContext
+  export_McpWriteTool -.-> export_McpJsonSchema
+  export_McpWriteTool -.-> export_McpPreparedWrite
+  export_McpWriteTool -.-> export_McpPreparedWriteProposal
+  export_McpWriteTool -.-> export_McpToolExecutionContext
   export_RegisteredMcpTool["RegisteredMcpTool"]
   module_src_features_registry_application_createMcpRegistry_ts --> export_RegisteredMcpTool

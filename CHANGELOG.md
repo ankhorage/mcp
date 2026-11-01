@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 9a59839: Add the provider-neutral prepared-write lifecycle with trusted host persistence, approval claims, and at-most-once provider invocation.
+
 ## 0.3.0
 
 ### Minor Changes
