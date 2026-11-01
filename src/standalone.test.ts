@@ -105,7 +105,7 @@ async function assertRecoveryConsumerContractAsync(consumer: string): Promise<vo
   await writeFile(
     join(consumer, 'recovery-contract.ts'),
     "import type { McpPreparedWriteStore } from '@ankhorage/mcp';\n" +
-      "const store: McpPreparedWriteStore = { createPreparedWriteAsync: async (proposal) => ({ approvalId: 'approval', expiresAt: '2026-11-01T00:00:00.000Z', proposal, snapshotFingerprint: 'fingerprint' }), claimApprovedWriteAndCreateIntentAsync: async () => null, settlePreparedWriteAsync: async () => {}, readPreparedWriteRecoveryAsync: async () => ({ outcome: 'executing' }) };\n" +
+      "const store: McpPreparedWriteStore = { createPreparedWriteAsync: async (proposal) => ({ approvalId: 'approval', expiresAt: '2026-11-01T00:00:00.000Z', proposal, snapshotFingerprint: 'fingerprint' }), claimApprovedWriteAndCreateIntentAsync: async () => null, settlePreparedWriteAsync: async () => {}, readPreparedWriteRecoveryAsync: async () => ({ outcome: 'executing' }), claimPreparedWriteRecoveryAsync: async () => null, settlePreparedWriteRecoveryAndRecordAuditAsync: async () => {} };\n" +
       "type ExposesLegacyRecoveryMethod = 'reconcilePreparedWriteAsync' extends keyof McpPreparedWriteStore ? true : false;\n" +
       'const hasNoLegacyRecoveryMethod: ExposesLegacyRecoveryMethod extends false ? true : never = true;\n' +
       'void store; void hasNoLegacyRecoveryMethod;\n',
