@@ -11,6 +11,7 @@ test('accepts the packed package through independent Node, Bun, MCP, Ankh, and s
   const consumer = await createPackedConsumerAsync();
   try {
     await assertExportsAsync(consumer);
+    await assertRecoveryConsumerContractAsync(consumer);
     await assertNodeDiscoveryAsync(consumer);
     await assertAnkhCliAsync(consumer);
     await assertMcpStdioAsync(consumer);
@@ -98,6 +99,35 @@ async function assertExportsAsync(consumer: string): Promise<void> {
   );
   expect(installedManifest).not.toContain('workspace:');
   expect(installedManifest).not.toContain('file:');
+}
+
+async function assertRecoveryConsumerContractAsync(consumer: string): Promise<void> {
+  await writeFile(
+    join(consumer, 'recovery-contract.ts'),
+    "import type { McpPreparedWriteStore } from '@ankhorage/mcp';\n" +
+      "const store: McpPreparedWriteStore = { createPreparedWriteAsync: async (proposal) => ({ approvalId: 'approval', expiresAt: '2026-11-01T00:00:00.000Z', proposal, snapshotFingerprint: 'fingerprint' }), claimApprovedWriteAndCreateIntentAsync: async () => null, settlePreparedWriteAsync: async () => {}, readPreparedWriteRecoveryAsync: async () => ({ outcome: 'executing' }) };\n" +
+      "type ExposesLegacyRecoveryMethod = 'reconcilePreparedWriteAsync' extends keyof McpPreparedWriteStore ? true : false;\n" +
+      'const hasNoLegacyRecoveryMethod: ExposesLegacyRecoveryMethod extends false ? true : never = true;\n' +
+      'void store; void hasNoLegacyRecoveryMethod;\n',
+    'utf8',
+  );
+  await runCommandAsync(
+    [
+      'bun',
+      join(repositoryRoot, 'node_modules', 'typescript', 'bin', 'tsc'),
+      '--module',
+      'NodeNext',
+      '--moduleResolution',
+      'NodeNext',
+      '--noEmit',
+      '--skipLibCheck',
+      '--strict',
+      '--target',
+      'ES2024',
+      'recovery-contract.ts',
+    ],
+    consumer,
+  );
 }
 
 async function assertNodeDiscoveryAsync(consumer: string): Promise<void> {
