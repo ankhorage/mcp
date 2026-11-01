@@ -1,19 +1,17 @@
 import type {
-  McpApprovalVerifier,
   McpAuditSink,
   McpIntegration,
   McpInvocationContext,
-  McpTransactionalApprovalConsumer,
+  McpPreparedWriteStore,
 } from '../../../types/public.js';
 import { createMcpRegistry } from '../../registry/application/createMcpRegistry.js';
 import { createMcpStdioServerAsync as createMcpStdioServerAdapterAsync } from '../adapters/inbound/createMcpStdioServerAsync.js';
 
 export interface CreateMcpStdioServerOptions {
-  readonly approvalVerifier?: McpApprovalVerifier;
   readonly auditSink?: McpAuditSink;
   readonly context: McpInvocationContext;
   readonly integrations: readonly McpIntegration[];
-  readonly transactionalApprovalConsumers?: readonly McpTransactionalApprovalConsumer[];
+  readonly preparedWriteStore?: McpPreparedWriteStore;
   readonly version: string;
 }
 
@@ -25,13 +23,10 @@ export async function createMcpStdioServerAsync(
     context: options.context,
     registry: createMcpRegistry({
       integrations: options.integrations,
-      ...(options.approvalVerifier === undefined
-        ? {}
-        : { approvalVerifier: options.approvalVerifier }),
       ...(options.auditSink === undefined ? {} : { auditSink: options.auditSink }),
-      ...(options.transactionalApprovalConsumers === undefined
+      ...(options.preparedWriteStore === undefined
         ? {}
-        : { transactionalApprovalConsumers: options.transactionalApprovalConsumers }),
+        : { preparedWriteStore: options.preparedWriteStore }),
     }),
     version: options.version,
   });

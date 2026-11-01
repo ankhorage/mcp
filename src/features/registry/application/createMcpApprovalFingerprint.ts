@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 /** Produce a canonical proposal fingerprint independent of property insertion order. */
-export function createMcpApprovalFingerprint(value: Readonly<Record<string, unknown>>): string {
+export function createMcpApprovalFingerprint(value: unknown): string {
   return createHash('sha256')
     .update(JSON.stringify(sortJson(value)))
     .digest('hex');
