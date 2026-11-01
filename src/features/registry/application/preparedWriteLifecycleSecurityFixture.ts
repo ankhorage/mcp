@@ -11,6 +11,8 @@ export const securityContext = { actorId: 'operator', allowedAccounts: ['account
 export const securityApprovalInput = { approvalId: 'approval' };
 
 export type PreparedWriteSecurityFixtureOptions = Readonly<{
+  readonly auditOutcome?: 'indeterminate';
+  readonly auditOutcomeThrows?: boolean;
   readonly auditFailsFor?: 'intent_persisted' | 'mutation_verified';
   readonly claimProposal?: (proposal: McpPreparedWriteProposal) => McpPreparedWriteProposal;
   readonly executeFails?: boolean;
@@ -120,6 +122,10 @@ function createTool(
 ): McpWriteTool {
   return {
     accountId: () => 'account',
+    auditOutcome: () => {
+      if (options.auditOutcomeThrows === true) throw new Error('provider outcome unavailable');
+      return options.auditOutcome ?? 'executed';
+    },
     description: 'Mutate the fixture.',
     executePreparedWriteAsync: () => {
       state.calls += 1;

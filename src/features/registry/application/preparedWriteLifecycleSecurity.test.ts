@@ -126,6 +126,9 @@ test('claims concurrent executions once and never retries an indeterminate provi
     'execution failed',
   );
   expect(indeterminate.state.calls).toBe(1);
+  expect(indeterminate.state.settlements).toEqual([
+    { outcome: 'indeterminate', reasonCode: 'provider-outcome-unknown' },
+  ]);
   expect(indeterminate.state.audit.map(({ outcome }) => outcome)).toEqual([
     'intent_persisted',
     'provider_call_started',
@@ -136,6 +139,60 @@ test('claims concurrent executions once and never retries an indeterminate provi
     'denied, expired, replayed',
   );
   expect(indeterminate.state.calls).toBe(1);
+});
+
+test('settles only a verified provider result as executed', async () => {
+  const fixture = createFixture();
+  await prepareAsync(fixture.registry);
+
+  expect(await fixture.registry.executeAsync('fixture.write', approvalInput, context)).toEqual({
+    ok: true,
+  });
+
+  expect(fixture.state.calls).toBe(1);
+  expect(fixture.state.settlements).toEqual([{ outcome: 'executed' }]);
+  expect(fixture.state.audit.map(({ outcome }) => outcome)).toEqual([
+    'intent_persisted',
+    'provider_call_started',
+    'mutation_verified',
+  ]);
+});
+
+test('preserves an indeterminate provider outcome without another mutation', async () => {
+  const fixture = createFixture({ auditOutcome: 'indeterminate' });
+  await prepareAsync(fixture.registry);
+
+  expect(await fixture.registry.executeAsync('fixture.write', approvalInput, context)).toEqual({
+    ok: true,
+  });
+
+  expect(fixture.state.calls).toBe(1);
+  expect(fixture.state.settlements).toEqual([{ outcome: 'indeterminate' }]);
+  expect(fixture.state.audit.map(({ outcome }) => outcome)).toEqual([
+    'intent_persisted',
+    'provider_call_started',
+    'indeterminate',
+  ]);
+});
+
+test('settles a failed provider outcome classification as indeterminate', async () => {
+  const fixture = createFixture({ auditOutcomeThrows: true });
+  await prepareAsync(fixture.registry);
+
+  await rejectsAsync(
+    fixture.registry.executeAsync('fixture.write', approvalInput, context),
+    'execution failed',
+  );
+
+  expect(fixture.state.calls).toBe(1);
+  expect(fixture.state.settlements).toEqual([
+    { outcome: 'indeterminate', reasonCode: 'provider-outcome-unknown' },
+  ]);
+  expect(fixture.state.audit.map(({ outcome }) => outcome)).toEqual([
+    'intent_persisted',
+    'provider_call_started',
+    'indeterminate',
+  ]);
 });
 
 test('durably settles verification rejection and provider verification exceptions without mutation', async () => {

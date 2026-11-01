@@ -1,6 +1,7 @@
 import type { McpClaimedPreparedWrite } from '../../../types/preparedWrite.js';
 import type {
   McpAuditSink,
+  McpExecutionAuditOutcome,
   McpPreparedWriteSettlementOutcome,
   McpPreparedWriteStore,
   McpToolExecutionContext,
@@ -64,15 +65,19 @@ async function verifyAsync(
 async function invokeAndSettleAsync(
   input: Parameters<typeof executeMcpClaimedWriteAsync>[0],
 ): Promise<unknown> {
-  const output = await invokeProviderAsync(input);
-  await settleAndAuditAsync(input, 'executed', 'mutation_verified');
+  const { output, outcome } = await invokeProviderAsync(input);
+  await settleAndAuditAsync(
+    input,
+    outcome === 'executed' ? 'executed' : 'indeterminate',
+    outcome === 'executed' ? 'mutation_verified' : 'indeterminate',
+  );
   return output;
 }
 
 /** Limit indeterminate handling to the interval after the provider call may have begun. */
 async function invokeProviderAsync(
   input: Parameters<typeof executeMcpClaimedWriteAsync>[0],
-): Promise<unknown> {
+): Promise<{ readonly outcome: McpExecutionAuditOutcome; readonly output: unknown }> {
   try {
     const output = await input.tool.executePreparedWriteAsync(
       input.claimed.proposal,
@@ -80,7 +85,7 @@ async function invokeProviderAsync(
     );
     if (input.tool.outputSchema !== undefined)
       assertMcpJsonSchema(output, input.tool.outputSchema, 'output');
-    return output;
+    return { outcome: input.tool.auditOutcome?.(output) ?? 'executed', output };
   } catch (error) {
     await settleAndAuditAsync(input, 'indeterminate', 'indeterminate', 'provider-outcome-unknown');
     if (error instanceof McpRequestError) throw error;

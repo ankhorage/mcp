@@ -95,6 +95,7 @@ export interface McpWriteTool extends McpToolBase {
   readonly risk: 'write';
   readonly scope: 'account';
   accountId(input: Readonly<Record<string, unknown>>): string | null;
+  /** If absent, a regular execution return must guarantee that the mutation was actually verified. */
   auditOutcome?(output: unknown): McpExecutionAuditOutcome;
   prepareWriteAsync(
     input: Readonly<Record<string, unknown>>,
