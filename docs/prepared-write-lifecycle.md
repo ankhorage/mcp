@@ -15,3 +15,19 @@ This guarantees at-most-once provider invocation after an execution claim, not e
 `api-gateway/apps/ads` should adapt its PostgreSQL proposal snapshot and #67 atomic approval-consume/intent functions as `McpPreparedWriteStore`; it must retain the original serialized payload and fingerprints unchanged. Gateway #67 needs the idempotent, claim-bound `not_applied`/`executed`/`indeterminate` settlement and read-only reconciliation operations, plus the transactional audit outbox keyed by `eventId`. Gateway #69 must implement those operations in the host and prove PostgreSQL-17 concurrency, crash/timeout recovery, and STDIO E2E before production use. Gateway #67/#69 are intentionally not changed by this PR.
 
 Release in dependency order: publish the compatible `@ankhorage/mcp` minor first; then publish the migrated `@ankhorage/ads-google` against that released public API; then upgrade and acceptance-test the host/gateway and the packed consumer. Keep the cross-repository issue open until that final Ads write acceptance has completed.
+
+## Host recovery
+
+`McpRegistry.reconcilePreparedWriteAsync` is a privileged host operation, not an MCP STDIO tool.
+The host supplies the stored execution claim and process-owned invocation context. Before the
+runtime asks a provider for evidence, the prepared-write store must issue a recovery claim that
+fences both normal execution and other recoveries. The runtime revalidates the original tool,
+actor, account, proposal fingerprint, approval ID, and intent ID before using the registered
+write tool's optional `reconcilePreparedWriteAsync` evidence function.
+
+That provider function is read-only: it must never call `executePreparedWriteAsync`. It may return
+`executed` only with causal evidence, `not_applied` only when it can prove the mutation never
+started, and `indeterminate` otherwise. Missing, failing, or inconclusive evidence is settled as
+`indeterminate`. The host must reject conflicting settlements and make same-outcome retries
+idempotent. Agents cannot approve, claim normal execution, or retry an indeterminate mutation by
+using recovery.

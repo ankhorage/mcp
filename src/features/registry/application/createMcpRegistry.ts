@@ -1,5 +1,6 @@
 import type {
   McpAuditSink,
+  McpExecutionClaim,
   McpIntegration,
   McpInvocationContext,
   McpPreparedWriteStore,
@@ -14,6 +15,7 @@ import { executeMcpClaimedWriteAsync } from './executeMcpClaimedWriteAsync.js';
 import { isMcpToolIdentifier } from './isMcpToolIdentifier.js';
 import { McpRequestError } from './McpRequestError.js';
 import { prepareMcpWriteAsync } from './prepareMcpWriteAsync.js';
+import { reconcileMcpPreparedWriteAsync } from './reconcileMcpPreparedWriteAsync.js';
 import { recordMcpAuditBestEffortAsync } from './recordMcpAuditBestEffortAsync.js';
 
 export interface McpRegistry {
@@ -28,6 +30,11 @@ export interface McpRegistry {
     input: Readonly<Record<string, unknown>>,
     context: McpInvocationContext,
   ): Promise<{ readonly approvalId: string; readonly expiresAt: string }>;
+  reconcilePreparedWriteAsync(
+    toolId: string,
+    executionClaim: McpExecutionClaim,
+    context: McpInvocationContext,
+  ): Promise<{ readonly outcome: 'executed' | 'indeterminate' | 'not_applied' | 'executing' }>;
   listTools(): readonly RegisteredMcpTool[];
 }
 export type RegisteredMcpTool = Readonly<{ integrationId: string; tool: McpTool; toolId: string }>;
@@ -60,6 +67,16 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
         preparedWriteStore: options.preparedWriteStore,
         tool: registered.tool,
         toolId: registered.toolId,
+      });
+    },
+    reconcilePreparedWriteAsync: async (toolId, executionClaim, context) => {
+      const registered = toolsById.get(toolId);
+      return await reconcileMcpPreparedWriteAsync({
+        auditSink: options.auditSink,
+        context,
+        executionClaim,
+        preparedWriteStore: options.preparedWriteStore,
+        registeredTool: isRegisteredWriteTool(registered) ? registered : undefined,
       });
     },
     executeAsync: async (toolId, input, context) => {

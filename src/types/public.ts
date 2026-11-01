@@ -13,6 +13,11 @@ export interface McpExecutionClaim {
   readonly approvalId: string;
   readonly intentId: string;
 }
+
+/** An opaque host-issued fence that authorizes one read-only recovery attempt. */
+export interface McpPreparedWriteRecoveryClaim extends McpExecutionClaim {
+  readonly recoveryId: string;
+}
 export type McpPreparedWriteSettlementOutcome = 'executed' | 'indeterminate' | 'not_applied';
 export interface McpPreparedWriteSettlement {
   readonly executionClaim: McpExecutionClaim;
@@ -73,6 +78,23 @@ export interface McpPreparedWriteStore {
   reconcilePreparedWriteAsync(executionClaim: McpExecutionClaim): Promise<{
     readonly outcome: McpPreparedWriteSettlementOutcome | 'executing';
   }>;
+  /**
+   * Atomically fence an expired or indeterminate execution before recovery evidence is read.
+   * This claim must prevent normal execution and competing recovery until it is settled or expires.
+   */
+  claimPreparedWriteRecoveryAsync?(input: {
+    readonly allowedAccounts: readonly string[];
+    readonly actorId: string;
+    readonly executionClaim: McpExecutionClaim;
+  }): Promise<
+    (McpStoredPreparedWrite & { readonly recoveryClaim: McpPreparedWriteRecoveryClaim }) | null
+  >;
+  /** Settle only the matching recovery fence; same-outcome repeats are idempotent and conflicts fail. */
+  settlePreparedWriteRecoveryAsync?(settlement: {
+    readonly outcome: McpPreparedWriteSettlementOutcome;
+    readonly reasonCode?: string;
+    readonly recoveryClaim: McpPreparedWriteRecoveryClaim;
+  }): Promise<void>;
 }
 interface McpToolBase {
   readonly description: string;
@@ -105,6 +127,14 @@ export interface McpWriteTool extends McpToolBase {
     proposal: McpPreparedWriteProposal,
     context: McpToolExecutionContext,
   ): Promise<boolean>;
+  /**
+   * Read provider evidence for an immutable persisted proposal after a host has fenced recovery.
+   * Implementations must never call a provider mutation and return `indeterminate` without causal evidence.
+   */
+  reconcilePreparedWriteAsync?(
+    proposal: McpPreparedWriteProposal,
+    context: McpToolExecutionContext,
+  ): Promise<McpPreparedWriteSettlementOutcome>;
   executePreparedWriteAsync(
     proposal: McpPreparedWriteProposal,
     context: McpToolExecutionContext,
