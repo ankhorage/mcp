@@ -80,13 +80,11 @@ function isMcpPreparedWriteStore(value: unknown): boolean {
   const store = value as {
     readonly createPreparedWriteAsync?: unknown;
     readonly claimApprovedWriteAndCreateIntentAsync?: unknown;
-    readonly reconcilePreparedWriteAsync?: unknown;
     readonly settlePreparedWriteAsync?: unknown;
   };
   return (
     typeof store.createPreparedWriteAsync === 'function' &&
     typeof store.claimApprovedWriteAndCreateIntentAsync === 'function' &&
-    typeof store.reconcilePreparedWriteAsync === 'function' &&
     typeof store.settlePreparedWriteAsync === 'function'
   );
 }

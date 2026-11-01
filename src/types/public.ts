@@ -13,11 +13,19 @@ export interface McpExecutionClaim {
   readonly approvalId: string;
   readonly intentId: string;
 }
+
+/** An opaque host-issued fence that authorizes one read-only recovery attempt. */
+export interface McpPreparedWriteRecoveryClaim extends McpExecutionClaim {
+  readonly recoveryId: string;
+}
 export type McpPreparedWriteSettlementOutcome = 'executed' | 'indeterminate' | 'not_applied';
 export interface McpPreparedWriteSettlement {
   readonly executionClaim: McpExecutionClaim;
   readonly outcome: McpPreparedWriteSettlementOutcome;
   readonly reasonCode?: string;
+}
+export interface McpPreparedWriteRecoveryRead {
+  readonly outcome: McpPreparedWriteSettlementOutcome | 'executing';
 }
 export interface McpToolExecutionContext extends McpInvocationContext {
   readonly executionClaim?: McpExecutionClaim;
@@ -69,10 +77,38 @@ export interface McpPreparedWriteStore {
   }): Promise<(McpStoredPreparedWrite & { readonly executionClaim: McpExecutionClaim }) | null>;
   /** Atomically settle one intent. Implementations must make same-outcome repeats idempotent and reject conflicts. */
   settlePreparedWriteAsync(settlement: McpPreparedWriteSettlement): Promise<void>;
-  /** Read-only recovery; implementations must never invoke the provider from this operation. */
-  reconcilePreparedWriteAsync(executionClaim: McpExecutionClaim): Promise<{
-    readonly outcome: McpPreparedWriteSettlementOutcome | 'executing';
-  }>;
+  /**
+   * Atomically authorize a recovery status read against the persisted approval, intent, account,
+   * actor, tool, proposal, and snapshot bindings. This operation must never invoke a provider.
+   */
+  readPreparedWriteRecoveryAsync?(input: {
+    readonly actorId: string;
+    readonly allowedAccounts: readonly string[];
+    readonly executionClaim: McpExecutionClaim;
+    readonly toolId: string;
+  }): Promise<McpPreparedWriteRecoveryRead | null>;
+  /**
+   * Atomically fence an expired or indeterminate execution before recovery evidence is read.
+   * This claim must prevent normal execution and competing recovery until it is settled or expires.
+   */
+  claimPreparedWriteRecoveryAsync?(input: {
+    readonly allowedAccounts: readonly string[];
+    readonly actorId: string;
+    readonly executionClaim: McpExecutionClaim;
+  }): Promise<
+    (McpStoredPreparedWrite & { readonly recoveryClaim: McpPreparedWriteRecoveryClaim }) | null
+  >;
+  /**
+   * Atomically settle a matching recovery fence and persist its complete audit event in the host's
+   * durable outbox. Same settlement plus event is idempotent; conflicting outcome or event data
+   * must fail without changing either record.
+   */
+  settlePreparedWriteRecoveryAndRecordAuditAsync?(input: {
+    readonly auditEvent: McpWriteAuditEvent;
+    readonly outcome: McpPreparedWriteSettlementOutcome;
+    readonly reasonCode?: string;
+    readonly recoveryClaim: McpPreparedWriteRecoveryClaim;
+  }): Promise<void>;
 }
 interface McpToolBase {
   readonly description: string;
@@ -105,6 +141,14 @@ export interface McpWriteTool extends McpToolBase {
     proposal: McpPreparedWriteProposal,
     context: McpToolExecutionContext,
   ): Promise<boolean>;
+  /**
+   * Read provider evidence for an immutable persisted proposal after a host has fenced recovery.
+   * Implementations must never call a provider mutation and return `indeterminate` without causal evidence.
+   */
+  reconcilePreparedWriteAsync?(
+    proposal: McpPreparedWriteProposal,
+    context: McpToolExecutionContext,
+  ): Promise<McpPreparedWriteSettlementOutcome>;
   executePreparedWriteAsync(
     proposal: McpPreparedWriteProposal,
     context: McpToolExecutionContext,
@@ -146,6 +190,8 @@ export interface McpWriteAuditEvent {
   readonly outcome: McpWriteAuditOutcome;
   readonly providerProposalFingerprint: string;
   readonly reasonCode?: string;
+  /** The actual terminal state for a `reconciliation_completed` lifecycle event. */
+  readonly recoveryOutcome?: McpPreparedWriteSettlementOutcome;
   readonly risk: 'write';
   readonly snapshotFingerprint: string;
   readonly toolId: string;
