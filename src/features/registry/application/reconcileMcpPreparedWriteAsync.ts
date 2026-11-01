@@ -1,5 +1,4 @@
 import type {
-  McpAuditSink,
   McpExecutionClaim,
   McpInvocationContext,
   McpPreparedWriteSettlementOutcome,
@@ -9,23 +8,23 @@ import type {
 import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
 import { createMcpWriteAuditEvent } from './createMcpWriteAuditEvent.js';
 import { McpRequestError } from './McpRequestError.js';
-import { recordMcpAuditRequiredAsync } from './recordMcpAuditRequiredAsync.js';
 
 /*** Reconcile one host-fenced execution using only a matching provider's read-only evidence contract. */
 export async function reconcileMcpPreparedWriteAsync(input: {
-  readonly auditSink: McpAuditSink | undefined;
   readonly context: McpInvocationContext;
   readonly executionClaim: McpExecutionClaim;
   readonly preparedWriteStore: McpPreparedWriteStore | undefined;
   readonly registeredTool: { readonly tool: McpWriteTool; readonly toolId: string } | undefined;
 }): Promise<{ readonly outcome: McpPreparedWriteSettlementOutcome | 'executing' }> {
+  if (input.registeredTool === undefined)
+    throw new McpRequestError('MCP recovery denied: unknown write tool.');
   const store = input.preparedWriteStore;
   if (store === undefined)
     throw new McpRequestError('Write recovery requires a trusted prepared-write host.');
-  const current = await readCurrentOutcomeAsync(store, input.executionClaim);
+  const current = await readCurrentOutcomeAsync(store, input);
+  if (current === null)
+    throw new McpRequestError('MCP recovery denied: execution claim is not authorized.');
   if (current === 'executed' || current === 'not_applied') return { outcome: current };
-  if (input.registeredTool === undefined)
-    throw new McpRequestError('MCP recovery denied: unknown write tool.');
   const recovery = await claimRecoveryAsync(store, input);
   if (recovery === null) return { outcome: current };
   assertRecoveryBinding(input, recovery);
@@ -37,13 +36,24 @@ export async function reconcileMcpPreparedWriteAsync(input: {
   return { outcome };
 }
 
-/*** Read the durable state before attempting a recovery claim; this operation never reaches a provider. */
+/*** Read lifecycle state only through the host's atomically authorized recovery-read boundary. */
 async function readCurrentOutcomeAsync(
   store: McpPreparedWriteStore,
-  executionClaim: McpExecutionClaim,
-): Promise<McpPreparedWriteSettlementOutcome | 'executing'> {
+  input: Parameters<typeof reconcileMcpPreparedWriteAsync>[0],
+): Promise<McpPreparedWriteSettlementOutcome | 'executing' | null> {
+  if (store.readPreparedWriteRecoveryAsync === undefined)
+    throw new McpRequestError('Write recovery requires a trusted recovery-capable host.');
   try {
-    return (await store.reconcilePreparedWriteAsync(executionClaim)).outcome;
+    return (
+      (
+        await store.readPreparedWriteRecoveryAsync({
+          actorId: input.context.actorId,
+          allowedAccounts: input.context.allowedAccounts,
+          executionClaim: input.executionClaim,
+          toolId: input.registeredTool?.toolId ?? '',
+        })
+      )?.outcome ?? null
+    );
   } catch {
     throw new McpRequestError(
       'MCP recovery rejected because prepared-write persistence is unavailable.',
@@ -102,32 +112,34 @@ async function collectEvidenceAsync(
   }
 }
 
-/*** Persist the fenced terminal recovery result before its deterministic audit record. */
+/*** Persist the fenced terminal result and deterministic audit record in one host transaction. */
 async function settleAndAuditAsync(
   input: Parameters<typeof reconcileMcpPreparedWriteAsync>[0],
   recovery: NonNullable<Awaited<ReturnType<typeof claimRecoveryAsync>>>,
   outcome: McpPreparedWriteSettlementOutcome,
 ): Promise<void> {
   const store = input.preparedWriteStore;
-  if (store?.settlePreparedWriteRecoveryAsync === undefined)
-    throw new McpRequestError('Write recovery requires a trusted recovery-capable host.');
+  if (store?.settlePreparedWriteRecoveryAndRecordAuditAsync === undefined)
+    throw new McpRequestError('Write recovery requires an atomic recovery-audit host.');
+  const reasonCode = outcome === 'indeterminate' ? 'provider-evidence-insufficient' : undefined;
+  const auditEvent = createMcpWriteAuditEvent({
+    claim: input.executionClaim,
+    outcome: 'reconciliation_completed',
+    proposal: recovery.proposal,
+    recoveryOutcome: outcome,
+    snapshotFingerprint: recovery.snapshotFingerprint,
+    ...(reasonCode === undefined ? {} : { reasonCode }),
+  });
   try {
-    await store.settlePreparedWriteRecoveryAsync({
+    await store.settlePreparedWriteRecoveryAndRecordAuditAsync({
+      auditEvent,
       outcome,
-      ...(outcome === 'indeterminate' ? { reasonCode: 'provider-evidence-insufficient' } : {}),
+      ...(reasonCode === undefined ? {} : { reasonCode }),
       recoveryClaim: recovery.recoveryClaim,
     });
   } catch {
-    throw new McpRequestError('MCP recovery rejected because recovery settlement is unavailable.');
+    throw new McpRequestError(
+      'MCP recovery rejected because atomic recovery settlement is unavailable.',
+    );
   }
-  await recordMcpAuditRequiredAsync(
-    input.auditSink,
-    createMcpWriteAuditEvent({
-      claim: input.executionClaim,
-      outcome: 'reconciliation_completed',
-      proposal: recovery.proposal,
-      snapshotFingerprint: recovery.snapshotFingerprint,
-      ...(outcome === 'indeterminate' ? { reasonCode: 'provider-evidence-insufficient' } : {}),
-    }),
-  );
 }

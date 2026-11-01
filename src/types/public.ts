@@ -24,6 +24,9 @@ export interface McpPreparedWriteSettlement {
   readonly outcome: McpPreparedWriteSettlementOutcome;
   readonly reasonCode?: string;
 }
+export interface McpPreparedWriteRecoveryRead {
+  readonly outcome: McpPreparedWriteSettlementOutcome | 'executing';
+}
 export interface McpToolExecutionContext extends McpInvocationContext {
   readonly executionClaim?: McpExecutionClaim;
 }
@@ -74,10 +77,16 @@ export interface McpPreparedWriteStore {
   }): Promise<(McpStoredPreparedWrite & { readonly executionClaim: McpExecutionClaim }) | null>;
   /** Atomically settle one intent. Implementations must make same-outcome repeats idempotent and reject conflicts. */
   settlePreparedWriteAsync(settlement: McpPreparedWriteSettlement): Promise<void>;
-  /** Read-only recovery; implementations must never invoke the provider from this operation. */
-  reconcilePreparedWriteAsync(executionClaim: McpExecutionClaim): Promise<{
-    readonly outcome: McpPreparedWriteSettlementOutcome | 'executing';
-  }>;
+  /**
+   * Atomically authorize a recovery status read against the persisted approval, intent, account,
+   * actor, tool, proposal, and snapshot bindings. This operation must never invoke a provider.
+   */
+  readPreparedWriteRecoveryAsync?(input: {
+    readonly actorId: string;
+    readonly allowedAccounts: readonly string[];
+    readonly executionClaim: McpExecutionClaim;
+    readonly toolId: string;
+  }): Promise<McpPreparedWriteRecoveryRead | null>;
   /**
    * Atomically fence an expired or indeterminate execution before recovery evidence is read.
    * This claim must prevent normal execution and competing recovery until it is settled or expires.
@@ -89,8 +98,13 @@ export interface McpPreparedWriteStore {
   }): Promise<
     (McpStoredPreparedWrite & { readonly recoveryClaim: McpPreparedWriteRecoveryClaim }) | null
   >;
-  /** Settle only the matching recovery fence; same-outcome repeats are idempotent and conflicts fail. */
-  settlePreparedWriteRecoveryAsync?(settlement: {
+  /**
+   * Atomically settle a matching recovery fence and persist its complete audit event in the host's
+   * durable outbox. Same settlement plus event is idempotent; conflicting outcome or event data
+   * must fail without changing either record.
+   */
+  settlePreparedWriteRecoveryAndRecordAuditAsync?(input: {
+    readonly auditEvent: McpWriteAuditEvent;
     readonly outcome: McpPreparedWriteSettlementOutcome;
     readonly reasonCode?: string;
     readonly recoveryClaim: McpPreparedWriteRecoveryClaim;
@@ -176,6 +190,8 @@ export interface McpWriteAuditEvent {
   readonly outcome: McpWriteAuditOutcome;
   readonly providerProposalFingerprint: string;
   readonly reasonCode?: string;
+  /** The actual terminal state for a `reconciliation_completed` lifecycle event. */
+  readonly recoveryOutcome?: McpPreparedWriteSettlementOutcome;
   readonly risk: 'write';
   readonly snapshotFingerprint: string;
   readonly toolId: string;

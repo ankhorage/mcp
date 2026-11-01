@@ -72,7 +72,6 @@ export function createMcpRegistry(options: CreateMcpRegistryOptions): McpRegistr
     reconcilePreparedWriteAsync: async (toolId, executionClaim, context) => {
       const registered = toolsById.get(toolId);
       return await reconcileMcpPreparedWriteAsync({
-        auditSink: options.auditSink,
         context,
         executionClaim,
         preparedWriteStore: options.preparedWriteStore,

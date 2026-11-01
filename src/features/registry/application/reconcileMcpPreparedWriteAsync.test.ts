@@ -4,6 +4,7 @@ import type {
   McpPreparedWriteProposal,
   McpPreparedWriteSettlementOutcome,
   McpPreparedWriteStore,
+  McpWriteAuditEvent,
   McpWriteTool,
 } from '../../../types/public.js';
 import { createMcpApprovalFingerprint } from './createMcpApprovalFingerprint.js';
@@ -11,100 +12,131 @@ import { createMcpRegistry } from './createMcpRegistry.js';
 
 const context = { actorId: 'operator', allowedAccounts: ['account'] };
 const executionClaim = { approvalId: 'approval', intentId: 'intent' };
-interface FixtureOptions {
+type FixtureOptions = Readonly<{
+  readonly auditCommitFails?: boolean;
   readonly current?: McpPreparedWriteSettlementOutcome | 'executing';
   readonly evidence?: McpPreparedWriteSettlementOutcome;
   readonly evidenceFails?: boolean;
-  readonly invalidRecoveryBinding?: boolean;
-  readonly settlementFails?: boolean;
-}
+  readonly identity?: 'account' | 'actor' | 'approval-intent' | 'snapshot' | 'tool';
+}>;
 interface FixtureState {
+  audit: McpWriteAuditEvent[];
   evidenceCalls: number;
   executeCalls: number;
   recoveryClaims: number;
-  settlements: string[];
-}
-interface StoredFixture {
-  readonly approvalId: string;
-  readonly expiresAt: string;
-  readonly proposal: McpPreparedWriteProposal;
-  readonly snapshotFingerprint: string;
+  terminal: McpPreparedWriteSettlementOutcome | 'executing';
 }
 
-/** Exercise recovery only through the host-facing registry boundary, never through an MCP tool call. */
+/** Exercise recovery through the privileged registry boundary with a transactional host model. */
 function createFixture(options: FixtureOptions = {}) {
-  const state: FixtureState = {
+  const proposal = createProposal(options.identity);
+  const state = {
+    audit: [] as McpWriteAuditEvent[],
     evidenceCalls: 0,
     executeCalls: 0,
     recoveryClaims: 0,
-    settlements: [],
+    terminal: options.current ?? 'indeterminate',
   };
-  const proposal = createProposal();
-  const stored: StoredFixture = {
-    approvalId: executionClaim.approvalId,
-    expiresAt: '2026-11-01T00:00:00.000Z',
-    proposal,
-    snapshotFingerprint: createMcpApprovalFingerprint(proposal),
-  };
+  const store = createStore(options, proposal, state);
+  const tool = createTool(options, proposal, state);
   return {
     registry: createMcpRegistry({
       auditSink: { recordAsync: () => Promise.resolve() },
-      integrations: [{ id: 'fixture', tools: [createTool(options, state)] }],
-      preparedWriteStore: createStore(options, state, stored),
+      integrations: [{ id: 'fixture', tools: [tool] }],
+      preparedWriteStore: store,
     }),
     state,
   };
 }
 
-/** Model an exclusive host recovery lease with deterministic persistence failures. */
+/** Model host authorization and recovery-fence acquisition independently from the provider. */
 function createStore(
   options: FixtureOptions,
+  proposal: McpPreparedWriteProposal,
   state: FixtureState,
-  stored: StoredFixture,
 ): McpPreparedWriteStore {
   return {
     claimApprovedWriteAndCreateIntentAsync: () => Promise.resolve(null),
     claimPreparedWriteRecoveryAsync: () => {
       state.recoveryClaims += 1;
-      if (options.current === 'executing' || state.recoveryClaims > 1) return Promise.resolve(null);
+      if (state.terminal === 'executing' || state.recoveryClaims > 1) return Promise.resolve(null);
       return Promise.resolve({
-        ...stored,
+        approvalId: 'approval',
+        expiresAt: '2026-11-01T00:00:00.000Z',
+        proposal,
         recoveryClaim: {
-          ...executionClaim,
-          recoveryId: options.invalidRecoveryBinding === true ? '' : 'recovery-fence',
+          approvalId: options.identity === 'approval-intent' ? 'other-approval' : 'approval',
+          intentId: options.identity === 'approval-intent' ? 'other-intent' : 'intent',
+          recoveryId: 'recovery-fence',
         },
+        snapshotFingerprint:
+          options.identity === 'snapshot' ? 'tampered' : createMcpApprovalFingerprint(proposal),
       });
     },
-    createPreparedWriteAsync: () => Promise.resolve(stored),
-    reconcilePreparedWriteAsync: () =>
-      Promise.resolve({ outcome: options.current ?? 'indeterminate' }),
-    settlePreparedWriteAsync: () => Promise.resolve(),
-    settlePreparedWriteRecoveryAsync: (settlement) => {
-      if (options.settlementFails === true)
-        return Promise.reject(new Error('conflicting settlement'));
-      state.settlements.push(settlement.outcome);
-      return Promise.resolve();
+    createPreparedWriteAsync: () =>
+      Promise.resolve({
+        approvalId: 'approval',
+        expiresAt: '2026-11-01T00:00:00.000Z',
+        proposal,
+        snapshotFingerprint: createMcpApprovalFingerprint(proposal),
+      }),
+    readPreparedWriteRecoveryAsync: (input) => {
+      if (
+        input.actorId !== proposal.actorId ||
+        !input.allowedAccounts.includes(proposal.accountId) ||
+        input.toolId !== proposal.toolId ||
+        input.executionClaim.approvalId !== 'approval' ||
+        input.executionClaim.intentId !== 'intent' ||
+        options.identity !== undefined
+      )
+        return Promise.resolve(null);
+      return Promise.resolve({ outcome: state.terminal });
     },
+    settlePreparedWriteAsync: () => Promise.resolve(),
+    settlePreparedWriteRecoveryAndRecordAuditAsync: (input) =>
+      commitRecoveryAsync(options, state, input),
   };
 }
 
-/** Return a write provider that can collect recovery evidence but whose mutation counter stays observable. */
-function createTool(options: FixtureOptions, state: FixtureState): McpWriteTool {
-  const proposal = createProposal();
+/** Commit both recovery rows in the fixture together, or change neither. */
+function commitRecoveryAsync(
+  options: FixtureOptions,
+  state: FixtureState,
+  input: Parameters<
+    NonNullable<McpPreparedWriteStore['settlePreparedWriteRecoveryAndRecordAuditAsync']>
+  >[0],
+): Promise<void> {
+  const { auditEvent, outcome, recoveryClaim } = input;
+  if (
+    recoveryClaim.recoveryId !== 'recovery-fence' ||
+    auditEvent.recoveryOutcome !== outcome ||
+    auditEvent.outcome !== 'reconciliation_completed' ||
+    options.auditCommitFails === true
+  )
+    return Promise.reject(new Error('transaction rolled back'));
+  const existing = state.audit.find((event) => event.eventId === auditEvent.eventId);
+  if (existing !== undefined)
+    return JSON.stringify(existing) === JSON.stringify(auditEvent)
+      ? Promise.resolve()
+      : Promise.reject(new Error('conflicting event'));
+  state.terminal = outcome;
+  state.audit.push(auditEvent);
+  return Promise.resolve();
+}
+
+/** Return a write provider whose recovery evidence and mutation effects are independently visible. */
+function createTool(
+  options: FixtureOptions,
+  proposal: McpPreparedWriteProposal,
+  state: FixtureState,
+): McpWriteTool {
   return {
     accountId: () => 'account',
     description: 'Fixture write',
     executePreparedWriteAsync: () => Promise.resolve({ calls: ++state.executeCalls }),
     id: 'write',
     inputSchema: { additionalProperties: false, type: 'object' },
-    prepareWriteAsync: () =>
-      Promise.resolve({
-        change: proposal.change,
-        createdAt: proposal.createdAt,
-        fingerprint: proposal.fingerprint,
-        operation: proposal.operation,
-        payload: proposal.payload,
-      }),
+    prepareWriteAsync: () => Promise.resolve(withoutBindings(proposal)),
     reconcilePreparedWriteAsync: () => {
       state.evidenceCalls += 1;
       return options.evidenceFails === true
@@ -118,96 +150,113 @@ function createTool(options: FixtureOptions, state: FixtureState): McpWriteTool 
   };
 }
 
-/** Return one immutable persisted proposal with all execution identity bindings present. */
-function createProposal(): McpPreparedWriteProposal {
+/** Create one persisted proposal, optionally with a deliberately invalid binding. */
+function createProposal(identity: FixtureOptions['identity']): McpPreparedWriteProposal {
   return {
-    accountId: 'account',
-    actorId: 'operator',
+    accountId: identity === 'account' ? 'other-account' : 'account',
+    actorId: identity === 'actor' ? 'other-actor' : 'operator',
     change: { after: { enabled: true }, before: { enabled: false }, resourceId: 'resource' },
     createdAt: '2026-11-01T00:00:00.000Z',
     fingerprint: 'provider-fingerprint',
     operation: 'write',
     payload: { serialized: '{"enabled":true}', version: 'fixture/v1' },
-    toolId: 'fixture.write',
+    toolId: identity === 'tool' ? 'fixture.other' : 'fixture.write',
   };
 }
 
-test('recovers a crashed execution as executed from read-only provider evidence without a second mutation', async () => {
+/** Remove the runtime-owned proposal bindings before a provider prepares its value. */
+function withoutBindings(proposal: McpPreparedWriteProposal) {
+  const { accountId: _accountId, actorId: _actorId, toolId: _toolId, ...prepared } = proposal;
+  return prepared;
+}
+
+/** Assert a rejected recovery without exposing host implementation errors. */
+async function rejectsAsync(promise: Promise<unknown>, message: string): Promise<void> {
+  try {
+    await promise;
+  } catch (error) {
+    expect(error).toHaveProperty('message', expect.stringContaining(message));
+    return;
+  }
+  throw new Error('Expected recovery to reject.');
+}
+
+test('authorizes terminal reads before returning executed and never asks a provider for evidence', async () => {
+  const fixture = createFixture({ current: 'executed' });
+  expect(
+    await fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
+  ).toEqual({ outcome: 'executed' });
+  expect(fixture.state.evidenceCalls).toBe(0);
+  expect(fixture.state.executeCalls).toBe(0);
+});
+
+test('fails closed before terminal reads for unknown tools, foreign actors, accounts, tools, IDs, and snapshots', async () => {
+  const unknown = createFixture({ current: 'executed' });
+  await rejectsAsync(
+    unknown.registry.reconcilePreparedWriteAsync('fixture.unknown', executionClaim, context),
+    'unknown write tool',
+  );
+  for (const identity of ['actor', 'account', 'tool', 'approval-intent', 'snapshot'] as const) {
+    const fixture = createFixture({ identity });
+    await rejectsAsync(
+      fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
+      'execution claim is not authorized',
+    );
+    expect(
+      fixture.state.evidenceCalls + fixture.state.executeCalls + fixture.state.audit.length,
+    ).toBe(0);
+  }
+});
+
+test('atomically commits recovery settlement and outcome-specific audit, then permits an authorized restart read', async () => {
   const fixture = createFixture({ evidence: 'executed' });
   expect(
     await fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
   ).toEqual({ outcome: 'executed' });
-  expect(fixture.state).toEqual({
-    evidenceCalls: 1,
-    executeCalls: 0,
-    recoveryClaims: 1,
-    settlements: ['executed'],
+  expect(fixture.state.audit).toHaveLength(1);
+  expect(fixture.state.audit[0]).toMatchObject({
+    outcome: 'reconciliation_completed',
+    recoveryOutcome: 'executed',
   });
-});
-
-test('settles not_applied only when the provider evidence contract returns that proof', async () => {
-  const fixture = createFixture({ evidence: 'not_applied' });
   expect(
     await fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-  ).toEqual({ outcome: 'not_applied' });
-  expect(fixture.state.settlements).toEqual(['not_applied']);
-});
-
-test('keeps timeout, crash-after-call, and missing evidence indeterminate without invoking execution', async () => {
-  const timeout = createFixture({ evidenceFails: true });
-  const absent = createFixture();
-  expect(
-    await timeout.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-  ).toEqual({ outcome: 'indeterminate' });
-  expect(
-    await absent.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-  ).toEqual({ outcome: 'indeterminate' });
-  expect(timeout.state.executeCalls + absent.state.executeCalls).toBe(0);
-});
-
-test('does not inspect a settled execution or convert an active execution into a provider call', async () => {
-  const settled = createFixture({ current: 'executed' });
-  const active = createFixture({ current: 'executing' });
-  expect(
-    await settled.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
   ).toEqual({ outcome: 'executed' });
-  expect(
-    await active.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-  ).toEqual({ outcome: 'executing' });
-  expect(settled.state.evidenceCalls + active.state.evidenceCalls).toBe(0);
-});
-
-test('fences parallel recovery attempts so only one can collect provider evidence', async () => {
-  const fixture = createFixture({ evidence: 'executed' });
-  const outcomes = await Promise.all([
-    fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-    fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-  ]);
-  expect(outcomes).toContainEqual({ outcome: 'executed' });
   expect(fixture.state.evidenceCalls).toBe(1);
   expect(fixture.state.executeCalls).toBe(0);
 });
 
-test('rejects invalid recovery bindings and contradictory recovery settlements', async () => {
-  const invalid = createFixture({ invalidRecoveryBinding: true });
-  const conflicting = createFixture({ settlementFails: true });
-  await rejectAsync(
-    invalid.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-    'immutable execution binding is invalid',
+test('rolls back both recovery state and audit when the host transaction cannot commit', async () => {
+  const fixture = createFixture({ auditCommitFails: true, evidence: 'not_applied' });
+  await rejectsAsync(
+    fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
+    'atomic recovery settlement is unavailable',
   );
-  await rejectAsync(
-    conflicting.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
-    'recovery settlement is unavailable',
-  );
-  expect(invalid.state.executeCalls + conflicting.state.executeCalls).toBe(0);
+  expect(fixture.state.terminal).toBe('indeterminate');
+  expect(fixture.state.audit).toHaveLength(0);
 });
 
-/** Assert a rejected recovery without relying on the host implementation's raw error. */
-async function rejectAsync(promise: Promise<unknown>, expected: string): Promise<void> {
-  try {
-    await promise;
-    throw new Error('Expected recovery to reject.');
-  } catch (error) {
-    expect(error).toHaveProperty('message', expect.stringContaining(expected));
-  }
-}
+test('records distinct deterministic audits for each recovery outcome and treats missing or failing evidence as indeterminate', async () => {
+  const executed = createFixture({ evidence: 'executed' });
+  const notApplied = createFixture({ evidence: 'not_applied' });
+  const indeterminate = createFixture({ evidenceFails: true });
+  for (const fixture of [executed, notApplied, indeterminate])
+    await fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context);
+  expect(executed.state.audit[0]?.eventId).not.toBe(notApplied.state.audit[0]?.eventId);
+  expect(notApplied.state.audit[0]?.eventId).not.toBe(indeterminate.state.audit[0]?.eventId);
+  expect(indeterminate.state.audit[0]).toMatchObject({
+    recoveryOutcome: 'indeterminate',
+    reasonCode: 'provider-evidence-insufficient',
+  });
+  expect(indeterminate.state.executeCalls).toBe(0);
+});
+
+test('fences parallel recovery attempts so only one collects evidence and commits an audit', async () => {
+  const fixture = createFixture({ evidence: 'executed' });
+  await Promise.all([
+    fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
+    fixture.registry.reconcilePreparedWriteAsync('fixture.write', executionClaim, context),
+  ]);
+  expect(fixture.state.evidenceCalls).toBe(1);
+  expect(fixture.state.audit).toHaveLength(1);
+  expect(fixture.state.executeCalls).toBe(0);
+});

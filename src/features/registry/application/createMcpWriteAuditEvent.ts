@@ -1,6 +1,7 @@
 import type {
   McpExecutionClaim,
   McpPreparedWriteProposal,
+  McpPreparedWriteSettlementOutcome,
   McpStoredPreparedWrite,
   McpWriteAuditEvent,
   McpWriteAuditOutcome,
@@ -12,12 +13,14 @@ export function createMcpWriteAuditEvent(input: {
   readonly claim: McpExecutionClaim;
   readonly outcome: McpWriteAuditOutcome;
   readonly proposal: McpPreparedWriteProposal;
+  readonly recoveryOutcome?: McpPreparedWriteSettlementOutcome;
   readonly reasonCode?: string;
   readonly snapshotFingerprint: McpStoredPreparedWrite['snapshotFingerprint'];
 }): McpWriteAuditEvent {
   const eventKey = {
     intentId: input.claim.intentId,
     outcome: input.outcome,
+    recoveryOutcome: input.recoveryOutcome ?? null,
     reasonCode: input.reasonCode ?? null,
   };
   return {
@@ -31,6 +34,7 @@ export function createMcpWriteAuditEvent(input: {
     providerProposalFingerprint: input.proposal.fingerprint,
     ...(input.reasonCode === undefined ? {} : { reasonCode: input.reasonCode }),
     risk: 'write',
+    ...(input.recoveryOutcome === undefined ? {} : { recoveryOutcome: input.recoveryOutcome }),
     snapshotFingerprint: input.snapshotFingerprint,
     toolId: input.proposal.toolId,
   };

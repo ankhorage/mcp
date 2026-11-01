@@ -6,7 +6,7 @@ The host persists it atomically and performs human approval outside MCP. Executi
 
 `McpPreparedWriteStore.settlePreparedWriteAsync` is bound to the authoritative execution claim and is idempotent for the same terminal outcome while rejecting contradictory terminal outcomes. A rejected or exceptional preflight settles the existing Gateway `not_applied` status with a safe reason code; no additional PostgreSQL status is required. If this settlement cannot be persisted, the already consumed intent remains locked and recoverable, and MCP makes no provider call. A provider call that may have started but has no confirmed result settles as `indeterminate`; recovery calls `reconcilePreparedWriteAsync`, which is read-only and must never retry a provider mutation.
 
-Write audit events are append-only records with a stable `eventId`, `intentId`, approval ID, account and actor identities, full tool ID, operation, provider proposal fingerprint, snapshot-integrity fingerprint, outcome, and safe reason code. Hosts persist by `eventId` idempotently (normally using an outbox written in the same database transaction as lifecycle state). The runtime records `intent_persisted`, `preflight_rejected`, `provider_call_started`, `mutation_verified`, and `indeterminate`; host reconciliation records `reconciliation_completed`. Events deliberately exclude serialized provider payloads and secrets. A lost append response is retried with the same event ID.
+Write audit events are append-only records with a stable `eventId`, `intentId`, approval ID, account and actor identities, full tool ID, operation, provider proposal fingerprint, snapshot-integrity fingerprint, outcome, and safe reason code. Recovery's `reconciliation_completed` event additionally carries its actual `recoveryOutcome` (`executed`, `not_applied`, or `indeterminate`), and that value is part of its deterministic event ID. Events deliberately exclude serialized provider payloads and secrets.
 
 This guarantees at-most-once provider invocation after an execution claim, not exactly-once external effect: an interrupted or timed-out provider call is `indeterminate` and must be reconciled using the stored claim, never retried as a mutation.
 
@@ -28,6 +28,22 @@ write tool's optional `reconcilePreparedWriteAsync` evidence function.
 That provider function is read-only: it must never call `executePreparedWriteAsync`. It may return
 `executed` only with causal evidence, `not_applied` only when it can prove the mutation never
 started, and `indeterminate` otherwise. Missing, failing, or inconclusive evidence is settled as
-`indeterminate`. The host must reject conflicting settlements and make same-outcome retries
-idempotent. Agents cannot approve, claim normal execution, or retry an indeterminate mutation by
-using recovery.
+`indeterminate`. Before every recovery status read, the host's
+`readPreparedWriteRecoveryAsync` must atomically validate the execution claim, process-owned actor
+and allowed-account set, registered tool ID, and persisted account, actor, tool, proposal and
+snapshot bindings. Unauthorized reads return no lifecycle state and make no provider call.
+
+For recovery only, `settlePreparedWriteRecoveryAndRecordAuditAsync` must settle the matching
+recovery fence and insert the full recovery audit event into a durable outbox in the same database
+transaction. It must commit both or roll back both, make an identical settlement plus event
+idempotent, reject a reused event ID with differing data, reject contradictory terminal outcomes,
+and reject stale fences without changing either record. This is deliberately a recovery-only host
+requirement: existing MCP 0.4.0 consumers keep their normal write contract, while hosts that opt
+into recovery must implement both new optional methods with no non-atomic fallback.
+
+Gateway follow-up: implement these two host operations in PostgreSQL with the proposal/account/
+actor/tool/snapshot predicates in the authorized read, plus a single settlement-and-outbox SQL
+transaction keyed by `eventId` and validated against `recoveryOutcome`. Prove stale-fence,
+rollback, restart, and concurrency behavior in gateway integration tests. This PR does not change
+Gateway SQL or the audit-outbox adapter. Agents cannot approve, claim normal execution, or retry an
+indeterminate mutation by using recovery.
