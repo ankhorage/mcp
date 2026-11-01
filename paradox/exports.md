@@ -4,7 +4,7 @@
 
 Kind: `function`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:42:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:49:1`
 
 ### Signatures
 
@@ -87,13 +87,13 @@ Load optional privileged composition from a process-owned absolute module path.
 
 Kind: `unknown`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:153:1`
+Source: `src/types/public.ts:199:1`
 
 ## McpAuditSink
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:154:1`
+Source: `src/types/public.ts:200:1`
 
 ### Members
 
@@ -105,7 +105,7 @@ Source: `src/types/public.ts:154:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:26:1`
+Source: `src/types/public.ts:34:1`
 
 ### Members
 
@@ -119,7 +119,7 @@ Source: `src/types/public.ts:26:1`
 
 Kind: `unknown`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:25:1`
+Source: `src/types/public.ts:33:1`
 
 ## McpExecutionClaim
 
@@ -138,7 +138,7 @@ Source: `src/types/public.ts:12:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:157:1`
+Source: `src/types/public.ts:203:1`
 
 ### Members
 
@@ -152,7 +152,7 @@ Source: `src/types/public.ts:157:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:162:1`
+Source: `src/types/public.ts:208:1`
 
 ### Members
 
@@ -164,7 +164,7 @@ Source: `src/types/public.ts:162:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:114:1`
+Source: `src/types/public.ts:158:1`
 
 ### Members
 
@@ -178,7 +178,7 @@ Source: `src/types/public.ts:114:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:119:1`
+Source: `src/types/public.ts:163:1`
 
 ### Members
 
@@ -219,7 +219,7 @@ Source: `src/types/public.ts:2:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:46:1`
+Source: `src/types/public.ts:54:1`
 
 ### Members
 
@@ -235,7 +235,7 @@ Source: `src/types/public.ts:46:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:31:1`
+Source: `src/types/public.ts:39:1`
 
 ### Members
 
@@ -248,7 +248,7 @@ Source: `src/types/public.ts:31:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:36:1`
+Source: `src/types/public.ts:44:1`
 
 ### Members
 
@@ -263,11 +263,37 @@ Source: `src/types/public.ts:36:1`
 | payload | property | `McpPreparedWritePayload` | yes |  |
 | toolId | property | `string` | yes |  |
 
+## McpPreparedWriteRecoveryClaim
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:18:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| approvalId | property | `string` | yes |  |
+| intentId | property | `string` | yes |  |
+| recoveryId | property | `string` | yes |  |
+
+## McpPreparedWriteRecoveryRead
+
+Kind: `type`
+Module: `src/types/public.ts`
+Source: `src/types/public.ts:27:1`
+
+### Members
+
+| Name | Kind | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| outcome | property | `McpPreparedWriteSettlementOutcome \| "executing"` | yes |  |
+
 ## McpPreparedWriteSettlement
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:17:1`
+Source: `src/types/public.ts:22:1`
 
 ### Members
 
@@ -281,28 +307,30 @@ Source: `src/types/public.ts:17:1`
 
 Kind: `unknown`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:16:1`
+Source: `src/types/public.ts:21:1`
 
 ## McpPreparedWriteStore
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:60:1`
+Source: `src/types/public.ts:68:1`
 
 ### Members
 
 | Name | Kind | Type | Required | Description |
 | --- | --- | --- | --- | --- |
 | claimApprovedWriteAndCreateIntentAsync | method | `(input: { readonly approvalId: string; readonly actorId: string; readonly allowedAccounts: readonly string[]; readonly toolId: string; }) => Promise<(McpStoredPreparedWrite & { readonly executionClaim: McpExecutionClaim; }) \| null>` | yes |  |
+| claimPreparedWriteRecoveryAsync | method | `(input: { readonly allowedAccounts: readonly string[]; readonly actorId: string; readonly executionClaim: McpExecutionClaim; }) => Promise<(McpStoredPreparedWrite & { readonly recoveryClaim: McpPreparedWriteRecoveryClaim; }) \| null>` | no |  |
 | createPreparedWriteAsync | method | `(proposal: McpPreparedWriteProposal) => Promise<McpStoredPreparedWrite>` | yes |  |
-| reconcilePreparedWriteAsync | method | `(executionClaim: McpExecutionClaim) => Promise<{ readonly outcome: McpPreparedWriteSettlementOutcome \| "executing"; }>` | yes |  |
+| readPreparedWriteRecoveryAsync | method | `(input: { readonly actorId: string; readonly allowedAccounts: readonly string[]; readonly executionClaim: McpExecutionClaim; readonly toolId: string; }) => Promise<McpPreparedWriteRecoveryRead \| null>` | no |  |
 | settlePreparedWriteAsync | method | `(settlement: McpPreparedWriteSettlement) => Promise<void>` | yes |  |
+| settlePreparedWriteRecoveryAndRecordAuditAsync | method | `(input: { readonly auditEvent: McpWriteAuditEvent; readonly outcome: McpPreparedWriteSettlementOutcome; readonly reasonCode?: string; readonly recoveryClaim: McpPreparedWriteRecoveryClaim; }) => Promise<void>` | no |  |
 
 ## McpReadAuditEvent
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:123:1`
+Source: `src/types/public.ts:167:1`
 
 ### Members
 
@@ -319,7 +347,7 @@ Source: `src/types/public.ts:123:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:84:1`
+Source: `src/types/public.ts:120:1`
 
 ### Members
 
@@ -339,7 +367,7 @@ Source: `src/types/public.ts:84:1`
 
 Kind: `type`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:19:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:21:1`
 
 ### Members
 
@@ -349,6 +377,7 @@ Source: `src/features/registry/application/createMcpRegistry.ts:19:1`
 | executeAsync | method | `(toolId: string, input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<unknown>` | yes |  |
 | listTools | method | `() => readonly RegisteredMcpTool[]` | yes |  |
 | prepareWriteAsync | method | `(toolId: string, input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<{ readonly approvalId: string; readonly expiresAt: string; }>` | yes |  |
+| reconcilePreparedWriteAsync | method | `(toolId: string, executionClaim: McpExecutionClaim, context: McpInvocationContext) => Promise<{ readonly outcome: "executed" \| "indeterminate" \| "not_applied" \| "executing"; }>` | yes |  |
 
 ## McpRisk
 
@@ -360,7 +389,7 @@ Source: `src/types/public.ts:1:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:53:1`
+Source: `src/types/public.ts:61:1`
 
 ### Members
 
@@ -375,13 +404,13 @@ Source: `src/types/public.ts:53:1`
 
 Kind: `unknown`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:113:1`
+Source: `src/types/public.ts:157:1`
 
 ## McpToolExecutionContext
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:22:1`
+Source: `src/types/public.ts:30:1`
 
 ### Members
 
@@ -395,7 +424,7 @@ Source: `src/types/public.ts:22:1`
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:138:1`
+Source: `src/types/public.ts:182:1`
 
 ### Members
 
@@ -410,6 +439,7 @@ Source: `src/types/public.ts:138:1`
 | outcome | property | `McpWriteAuditOutcome` | yes |  |
 | providerProposalFingerprint | property | `string` | yes |  |
 | reasonCode | property | `string` | no |  |
+| recoveryOutcome | property | `McpPreparedWriteSettlementOutcome` | no |  |
 | risk | property | `"write"` | yes |  |
 | snapshotFingerprint | property | `string` | yes |  |
 | toolId | property | `string` | yes |  |
@@ -418,13 +448,13 @@ Source: `src/types/public.ts:138:1`
 
 Kind: `unknown`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:131:1`
+Source: `src/types/public.ts:175:1`
 
 ## McpWriteTool
 
 Kind: `type`
 Module: `src/types/public.ts`
-Source: `src/types/public.ts:94:1`
+Source: `src/types/public.ts:130:1`
 
 ### Members
 
@@ -438,6 +468,7 @@ Source: `src/types/public.ts:94:1`
 | inputSchema | property | `McpJsonSchema` | yes |  |
 | outputSchema | property | `McpJsonSchema` | no |  |
 | prepareWriteAsync | method | `(input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<McpPreparedWrite>` | yes |  |
+| reconcilePreparedWriteAsync | method | `(proposal: McpPreparedWriteProposal, context: McpToolExecutionContext) => Promise<McpPreparedWriteSettlementOutcome>` | no |  |
 | risk | property | `"write"` | yes |  |
 | scope | property | `"account"` | yes |  |
 | title | property | `string` | yes |  |
@@ -447,4 +478,4 @@ Source: `src/types/public.ts:94:1`
 
 Kind: `unknown`
 Module: `src/features/registry/application/createMcpRegistry.ts`
-Source: `src/features/registry/application/createMcpRegistry.ts:33:1`
+Source: `src/features/registry/application/createMcpRegistry.ts:40:1`

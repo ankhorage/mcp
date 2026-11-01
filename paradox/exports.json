@@ -10,7 +10,7 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 42,
+      "line": 49,
       "column": 1
     },
     "exportPaths": [
@@ -263,7 +263,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 153,
+      "line": 199,
       "column": 1
     },
     "exportPaths": [
@@ -285,7 +285,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 154,
+      "line": 200,
       "column": 1
     },
     "exportPaths": [
@@ -317,7 +317,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 26,
+      "line": 34,
       "column": 1
     },
     "exportPaths": [
@@ -361,7 +361,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 25,
+      "line": 33,
       "column": 1
     },
     "exportPaths": [
@@ -420,7 +420,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 157,
+      "line": 203,
       "column": 1
     },
     "exportPaths": [
@@ -468,7 +468,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 162,
+      "line": 208,
       "column": 1
     },
     "exportPaths": [
@@ -500,7 +500,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 114,
+      "line": 158,
       "column": 1
     },
     "exportPaths": [
@@ -546,7 +546,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 119,
+      "line": 163,
       "column": 1
     },
     "exportPaths": [
@@ -673,7 +673,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 46,
+      "line": 54,
       "column": 1
     },
     "exportPaths": [
@@ -734,7 +734,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 31,
+      "line": 39,
       "column": 1
     },
     "exportPaths": [
@@ -771,7 +771,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 36,
+      "line": 44,
       "column": 1
     },
     "exportPaths": [
@@ -843,6 +843,82 @@
     "structuredRows": []
   },
   {
+    "name": "McpPreparedWriteRecoveryClaim",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 18,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [],
+    "signatures": [],
+    "members": [
+      {
+        "name": "approvalId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "intentId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "recoveryId",
+        "kind": "property",
+        "type": "string",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
+    "name": "McpPreparedWriteRecoveryRead",
+    "title": null,
+    "description": null,
+    "isReadme": false,
+    "see": [],
+    "security": [],
+    "kind": "type",
+    "modulePath": "src/types/public.ts",
+    "sourceLocation": {
+      "filePath": "src/types/public.ts",
+      "line": 27,
+      "column": 1
+    },
+    "exportPaths": [
+      "src/index.ts"
+    ],
+    "relatedSymbols": [
+      "McpPreparedWriteSettlementOutcome"
+    ],
+    "signatures": [],
+    "members": [
+      {
+        "name": "outcome",
+        "kind": "property",
+        "type": "McpPreparedWriteSettlementOutcome | \"executing\"",
+        "required": true,
+        "description": null
+      }
+    ],
+    "structuredRows": []
+  },
+  {
     "name": "McpPreparedWriteSettlement",
     "title": null,
     "description": null,
@@ -853,7 +929,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 17,
+      "line": 22,
       "column": 1
     },
     "exportPaths": [
@@ -900,7 +976,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 16,
+      "line": 21,
       "column": 1
     },
     "exportPaths": [
@@ -922,7 +998,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 60,
+      "line": 68,
       "column": 1
     },
     "exportPaths": [
@@ -931,9 +1007,12 @@
     "relatedSymbols": [
       "McpExecutionClaim",
       "McpPreparedWriteProposal",
+      "McpPreparedWriteRecoveryClaim",
+      "McpPreparedWriteRecoveryRead",
       "McpPreparedWriteSettlement",
       "McpPreparedWriteSettlementOutcome",
-      "McpStoredPreparedWrite"
+      "McpStoredPreparedWrite",
+      "McpWriteAuditEvent"
     ],
     "signatures": [],
     "members": [
@@ -945,6 +1024,13 @@
         "description": null
       },
       {
+        "name": "claimPreparedWriteRecoveryAsync",
+        "kind": "method",
+        "type": "(input: { readonly allowedAccounts: readonly string[]; readonly actorId: string; readonly executionClaim: McpExecutionClaim; }) => Promise<(McpStoredPreparedWrite & { readonly recoveryClaim: McpPreparedWriteRecoveryClaim; }) | null>",
+        "required": false,
+        "description": null
+      },
+      {
         "name": "createPreparedWriteAsync",
         "kind": "method",
         "type": "(proposal: McpPreparedWriteProposal) => Promise<McpStoredPreparedWrite>",
@@ -952,10 +1038,10 @@
         "description": null
       },
       {
-        "name": "reconcilePreparedWriteAsync",
+        "name": "readPreparedWriteRecoveryAsync",
         "kind": "method",
-        "type": "(executionClaim: McpExecutionClaim) => Promise<{ readonly outcome: McpPreparedWriteSettlementOutcome | \"executing\"; }>",
-        "required": true,
+        "type": "(input: { readonly actorId: string; readonly allowedAccounts: readonly string[]; readonly executionClaim: McpExecutionClaim; readonly toolId: string; }) => Promise<McpPreparedWriteRecoveryRead | null>",
+        "required": false,
         "description": null
       },
       {
@@ -963,6 +1049,13 @@
         "kind": "method",
         "type": "(settlement: McpPreparedWriteSettlement) => Promise<void>",
         "required": true,
+        "description": null
+      },
+      {
+        "name": "settlePreparedWriteRecoveryAndRecordAuditAsync",
+        "kind": "method",
+        "type": "(input: { readonly auditEvent: McpWriteAuditEvent; readonly outcome: McpPreparedWriteSettlementOutcome; readonly reasonCode?: string; readonly recoveryClaim: McpPreparedWriteRecoveryClaim; }) => Promise<void>",
+        "required": false,
         "description": null
       }
     ],
@@ -979,7 +1072,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 123,
+      "line": 167,
       "column": 1
     },
     "exportPaths": [
@@ -1044,7 +1137,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 84,
+      "line": 120,
       "column": 1
     },
     "exportPaths": [
@@ -1133,13 +1226,14 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 19,
+      "line": 21,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
     "relatedSymbols": [
+      "McpExecutionClaim",
       "McpInvocationContext",
       "RegisteredMcpTool"
     ],
@@ -1170,6 +1264,13 @@
         "name": "prepareWriteAsync",
         "kind": "method",
         "type": "(toolId: string, input: Readonly<Record<string, unknown>>, context: McpInvocationContext) => Promise<{ readonly approvalId: string; readonly expiresAt: string; }>",
+        "required": true,
+        "description": null
+      },
+      {
+        "name": "reconcilePreparedWriteAsync",
+        "kind": "method",
+        "type": "(toolId: string, executionClaim: McpExecutionClaim, context: McpInvocationContext) => Promise<{ readonly outcome: \"executed\" | \"indeterminate\" | \"not_applied\" | \"executing\"; }>",
         "required": true,
         "description": null
       }
@@ -1209,7 +1310,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 53,
+      "line": 61,
       "column": 1
     },
     "exportPaths": [
@@ -1262,7 +1363,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 113,
+      "line": 157,
       "column": 1
     },
     "exportPaths": [
@@ -1284,7 +1385,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 22,
+      "line": 30,
       "column": 1
     },
     "exportPaths": [
@@ -1330,13 +1431,14 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 138,
+      "line": 182,
       "column": 1
     },
     "exportPaths": [
       "src/index.ts"
     ],
     "relatedSymbols": [
+      "McpPreparedWriteSettlementOutcome",
       "McpWriteAuditOutcome"
     ],
     "signatures": [],
@@ -1405,6 +1507,13 @@
         "description": null
       },
       {
+        "name": "recoveryOutcome",
+        "kind": "property",
+        "type": "McpPreparedWriteSettlementOutcome",
+        "required": false,
+        "description": null
+      },
+      {
         "name": "risk",
         "kind": "property",
         "type": "\"write\"",
@@ -1439,7 +1548,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 131,
+      "line": 175,
       "column": 1
     },
     "exportPaths": [
@@ -1461,7 +1570,7 @@
     "modulePath": "src/types/public.ts",
     "sourceLocation": {
       "filePath": "src/types/public.ts",
-      "line": 94,
+      "line": 130,
       "column": 1
     },
     "exportPaths": [
@@ -1473,6 +1582,7 @@
       "McpJsonSchema",
       "McpPreparedWrite",
       "McpPreparedWriteProposal",
+      "McpPreparedWriteSettlementOutcome",
       "McpToolExecutionContext"
     ],
     "signatures": [],
@@ -1534,6 +1644,13 @@
         "description": null
       },
       {
+        "name": "reconcilePreparedWriteAsync",
+        "kind": "method",
+        "type": "(proposal: McpPreparedWriteProposal, context: McpToolExecutionContext) => Promise<McpPreparedWriteSettlementOutcome>",
+        "required": false,
+        "description": null
+      },
+      {
         "name": "risk",
         "kind": "property",
         "type": "\"write\"",
@@ -1575,7 +1692,7 @@
     "modulePath": "src/features/registry/application/createMcpRegistry.ts",
     "sourceLocation": {
       "filePath": "src/features/registry/application/createMcpRegistry.ts",
-      "line": 33,
+      "line": 40,
       "column": 1
     },
     "exportPaths": [

@@ -23,6 +23,8 @@ graph LR
   module_src_features_registry_application_preparedWriteLifecycleSecurity_test_ts["src/features/registry/application/preparedWriteLifecycleSecurity.test.ts"]
   module_src_features_registry_application_preparedWriteLifecycleSecurityFixture_ts["src/features/registry/application/preparedWriteLifecycleSecurityFixture.ts"]
   module_src_features_registry_application_prepareMcpWriteAsync_ts["src/features/registry/application/prepareMcpWriteAsync.ts"]
+  module_src_features_registry_application_reconcileMcpPreparedWriteAsync_test_ts["src/features/registry/application/reconcileMcpPreparedWriteAsync.test.ts"]
+  module_src_features_registry_application_reconcileMcpPreparedWriteAsync_ts["src/features/registry/application/reconcileMcpPreparedWriteAsync.ts"]
   module_src_features_registry_application_recordMcpAuditBestEffortAsync_ts["src/features/registry/application/recordMcpAuditBestEffortAsync.ts"]
   module_src_features_registry_application_recordMcpAuditRequiredAsync_ts["src/features/registry/application/recordMcpAuditRequiredAsync.ts"]
   module_src_features_registry_application_sanitizeMcpRequestAsync_ts["src/features/registry/application/sanitizeMcpRequestAsync.ts"]
@@ -93,6 +95,11 @@ graph LR
   module_src_types_public_ts --> export_McpPreparedWriteProposal
   export_McpPreparedWriteProposal -.-> export_McpChangeDescriptor
   export_McpPreparedWriteProposal -.-> export_McpPreparedWritePayload
+  export_McpPreparedWriteRecoveryClaim["McpPreparedWriteRecoveryClaim"]
+  module_src_types_public_ts --> export_McpPreparedWriteRecoveryClaim
+  export_McpPreparedWriteRecoveryRead["McpPreparedWriteRecoveryRead"]
+  module_src_types_public_ts --> export_McpPreparedWriteRecoveryRead
+  export_McpPreparedWriteRecoveryRead -.-> export_McpPreparedWriteSettlementOutcome
   export_McpPreparedWriteSettlement["McpPreparedWriteSettlement"]
   module_src_types_public_ts --> export_McpPreparedWriteSettlement
   export_McpPreparedWriteSettlement -.-> export_McpExecutionClaim
@@ -103,9 +110,12 @@ graph LR
   module_src_types_public_ts --> export_McpPreparedWriteStore
   export_McpPreparedWriteStore -.-> export_McpExecutionClaim
   export_McpPreparedWriteStore -.-> export_McpPreparedWriteProposal
+  export_McpPreparedWriteStore -.-> export_McpPreparedWriteRecoveryClaim
+  export_McpPreparedWriteStore -.-> export_McpPreparedWriteRecoveryRead
   export_McpPreparedWriteStore -.-> export_McpPreparedWriteSettlement
   export_McpPreparedWriteStore -.-> export_McpPreparedWriteSettlementOutcome
   export_McpPreparedWriteStore -.-> export_McpStoredPreparedWrite
+  export_McpPreparedWriteStore -.-> export_McpWriteAuditEvent
   export_McpReadAuditEvent["McpReadAuditEvent"]
   module_src_types_public_ts --> export_McpReadAuditEvent
   export_McpReadTool["McpReadTool"]
@@ -114,6 +124,7 @@ graph LR
   export_McpReadTool -.-> export_McpToolExecutionContext
   export_McpRegistry["McpRegistry"]
   module_src_features_registry_application_createMcpRegistry_ts --> export_McpRegistry
+  export_McpRegistry -.-> export_McpExecutionClaim
   export_McpRegistry -.-> export_McpInvocationContext
   export_McpRegistry -.-> export_RegisteredMcpTool
   export_McpRisk["McpRisk"]
@@ -128,6 +139,7 @@ graph LR
   export_McpToolExecutionContext -.-> export_McpExecutionClaim
   export_McpWriteAuditEvent["McpWriteAuditEvent"]
   module_src_types_public_ts --> export_McpWriteAuditEvent
+  export_McpWriteAuditEvent -.-> export_McpPreparedWriteSettlementOutcome
   export_McpWriteAuditEvent -.-> export_McpWriteAuditOutcome
   export_McpWriteAuditOutcome["McpWriteAuditOutcome"]
   module_src_types_public_ts --> export_McpWriteAuditOutcome
@@ -138,6 +150,7 @@ graph LR
   export_McpWriteTool -.-> export_McpJsonSchema
   export_McpWriteTool -.-> export_McpPreparedWrite
   export_McpWriteTool -.-> export_McpPreparedWriteProposal
+  export_McpWriteTool -.-> export_McpPreparedWriteSettlementOutcome
   export_McpWriteTool -.-> export_McpToolExecutionContext
   export_RegisteredMcpTool["RegisteredMcpTool"]
   module_src_features_registry_application_createMcpRegistry_ts --> export_RegisteredMcpTool
