@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "tooling",
+  "title": "Ankhorage MCP",
+  "summary": "Secure provider-neutral Model Context Protocol runtime and Ankh CLI provider.",
+  "purpose": "Discover provider integrations, register their tools, enforce declared account and approval boundaries, and expose them through a standard MCP transport.",
+  "domain": "Model Context Protocol hosting and tool governance",
+  "responsibilities": [
+    "Discover published MCP integrations from configured providers.",
+    "Validate and register provider tools with their declared risk, scope, and account identity.",
+    "Enforce approval and account-scope policy before tool execution.",
+    "Expose registered tools through a standard-input/output MCP server and Ankh CLI capabilities."
+  ],
+  "boundaries": [
+    "Does not implement provider-specific business integrations.",
+    "Does not infer authorization beyond the scope and approval facts supplied at the boundary.",
+    "Does not own provider credentials or account persistence."
+  ],
+  "audience": [
+    "Applications hosting MCP tools from independently published providers.",
+    "Ankh CLI users configuring, inspecting, and serving MCP integrations."
+  ],
+  "useCases": [
+    "Register a provider tool catalog in a central runtime.",
+    "Serve approved tools over standard MCP transport.",
+    "Inspect or diagnose available MCP integrations from the CLI."
+  ],
+  "architecture": {
+    "role": "Provider-neutral host with discovery, registry, policy, and transport features separated from provider adapters.",
+    "invariants": [
+      "Provider-specific integrations enter only through published boundaries.",
+      "Tool execution preserves declared approval, risk, scope, and account constraints."
+    ]
+  },
+  "constraints": {
+    "platforms": ["Node.js 24 or later."],
+    "security": [
+      "Account-scoped tools must retain explicit account identity and approval checks before execution."
+    ]
+  }
+}
